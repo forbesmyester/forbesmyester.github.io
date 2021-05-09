@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Graphviz</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2013-06-27-graphviz.html">
+Graphviz
+</a></h3>
+<!-- bashblog_timestamp: #201306270830.01# -->
+<div class="subtitle">June 27, 2013 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Often as a developer I want to explain something that is either very complicated or very abstract to other people and this is not easy always.</p>
+<p>In this situation I might use a diagram but I am not particularly skilled at doing this and I find the whole process incredibly frustrating and time consuming.</p>
+<p>I recently discovered a piece of software called Graphviz. It lets you describe what items are in a graph and the relations between those items and then draws the graph for you!</p>
+<p>For example you could have a diagram as simple as this:</p>
+<pre><code>digraph {
+  A -> B
+}
+</code></pre>
+<p>Which will generate the following:</p>
+<p><img src="/content-assets/2013-06-27-graphviz/Screenshot+from+2013-06-25+14:07:51.png" alt=""></p>
+<p>Could not be simpler right? But how about we try something a little more complex?</p>
+<pre><code>digraph {
+  graph [ dpi = 55 ];
+  rankdir="LR";
+  node[shape=record];
+  subgraph clusterStore {
+    label="Call Center";
+    Jack [label="Jack | \{hair: \"black\", eyes: \"blue\"\}"];
+    Computer [label="Computer System"];
+  }
+  subgraph clusterAws {
+    label="Amazon AWS";
+    WebServer
+    Database [label="Dynamo DB"];
+  }
+  Customer -> Jack [label="Phones"];
+  Jack -> Computer;
+  Computer -> WebServer [style="dashed", dir=both, label="HTTP"];
+  WebServer -> Database;
+  Database -> WebServer;
+
+  Computer -> Jack;
+}
+</code></pre>
+<p>This yields the following</p>
+<p><img src="/content-assets/2013-06-27-graphviz/Screenshot+from+2013-06-25+13:58:05.png" alt=""></p>
+<p>The downside of this is that you cannot directly control the position of individual elements in the graph, though I suspect that by now you are seeing that this tool can be quite beneficial when creating quick technical drawings.</p>
+<p>The best thing about Graphviz is that what you see in the code above is actually a language called DOT and quite well supported by a number of tools. This means that you can output nearly any type of image using the Graphviz tools but also that there is a variety of other implementations, most notably a Javascript port that <a href="http://mdaines.github.io/viz.js/example.html">renders to a <canvas> element</canvas></a> and a particularly sexy, but partial port that <a href="http://cpettitt.github.io/project/dagre/latest/demo/demo.html">runs on top of d3</a>.</p>
+<p>Currently I have Graphviz implemented inside my BDD test scripts so when they fail you can graphically see the state of the system which caused the error, this makes debugging soooo much easier.</p>
+<p>If you want to have a play I have prepared a <a href="http://jsbin.com/udogef/20/">Javascript demo on JS Bin</a>.</p>
+<p>So next time you're stuck explaining something, why not give <a href="http://www.graphviz.org/">GraphViz</a> a go...</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

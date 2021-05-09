@@ -1,0 +1,1341 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Matt at Keyboard Writes Code &mdash; Posts tagged "code-in-postgresql"</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<h3><a class="ablack" href="2019-05-15-code-in-postgresql-inner-join.html">
+Code In PostgreSQL: Combining data from multiple tables with INNER JOIN
+</a></h3>
+<!-- bashblog_timestamp: #201905150830.01# -->
+<div class="subtitle">May 15, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h4>This series of articles</h4>
+<p>This is the third of the Code in PostgreSQL series of articles.</p>
+<h5>Articles in this series</h5>
+<ul>
+<li><a href="2019-03-03-code-in-postgresql-in-order-by-limit.html">You can do lots with just IN, ORDER BY and LIMIT</a></li>
+<li><a href="2019-03-12-code-in-postgresql-with.html">You can use WITH to name specific parts of SQL</a></li>
+<li><a href="2019-05-15-code-in-postgresql-inner-join.html">Combining data from multiple tables with INNER JOIN</a></li>
+<li>A NoSQL developer might not know about: GROUP BY ( Soon to be published )</li>
+<li>Sub select ( Soon to be published )</li>
+<li>Variables ( Soon to be published )</li>
+<li>Prepare JSON ( Soon to be published )</li>
+<li>Create Function (and testing it) ( Soon to be published )</li>
+<li>Custom Aggregates ( Soon to be published )</li>
+</ul>
+<h5>The reason why SQL is so important</h5>
+<p>When developing systems we often have a choice of writing code (NodeJS, C#, Python or PHP etc) or SQL. I believe that sometimes the decision to write code is taken without fully evaluating how much of the task could be offloaded to SQL.</p>
+<p>In this series of articles I wish to show the huge benefits of using and learning SQL by examining progressively more difficult scenarios with increasing amounts of SQL knowledge. In doing this I hope to illustrate that sometimes large amounts of extra code is written for what SQL can achieve quicker, with less complexity and more readability.</p>
+<p>To be more specific, we should try to follow the <a href="https://en.wikipedia.org/wiki/Rule_of_least_power">rule of least power</a> more often.</p>
+<h5>About the Ergast data set</h5>
+<p>For this series of articles we will be using the <a href="https://ergast.com/mrd">Ergast</a> data set, which is a provided under the <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">Attribution-NonCommercial-ShareAlike 3.0 Unported Licence</a>.</p>
+<h5>Setting up the Ergast database within PostgreSQL</h5>
+<p>To set up the <a href="https://ergast.com/mrd">Ergast</a> database within PostgreSQL I did the following:</p>
+<p>I allowed <code>psql</code> and friends to work without me having to put in a password all the time by configuring the <a href="https://www.postgresql.org/docs/current/libpq-envars.html">PostgreSQL environmental variables</a>.</p>
+<pre><code class="language-bash">export PGUSER=postgres PGPASSWORD=postgres PGDATABASE=postgres PGHOST=127.0.0.1
+</code></pre>
+<p>Then import the <a href="http://ergast.com/">Ergast</a> database. NOTE: At the time of writing I was unable to install the PostgreSQL version.</p>
+<pre><code class="language-bash">wget -O /tmp/f1db_ansi.sql.gz http://ergast.com/downloads/f1db_ansi.sql.gz
+cat /tmp/f1db_ansi.sql.gz | \
+    gzip -d | \
+    sed 's/int(..)/int/' | \
+    sed 's/ \+AUTO_INCREMENT//' | \
+    sed "s/\\\'/\'\'/g" | \
+    sed 's/UNIQUE KEY \"\(\w\+\)\"/UNIQUE /' | \
+    sed 's/^ *KEY .*(\"\(.*\)\")/CHECK ("\1" > 0)/' | \
+    sed 's/ date NOT NULL DEFAULT .0000.*,/ date,/'| psql
+</code></pre>
+<h4>The Aim</h4>
+<p>At the end of the <a href="2019-03-12-code-in-postgresql-with.adoc">last article</a> we had the following dataset:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">points</th><th align="left">driverId</th><th align="left">year</th></tr></thead><tbody><tr><td align="left">363</td><td align="left">1</td><td align="left">2017</td></tr><tr><td align="left">317</td><td align="left">20</td><td align="left">2017</td></tr><tr><td align="left">305</td><td align="left">822</td><td align="left">2017</td></tr><tr><td align="left">205</td><td align="left">8</td><td align="left">2017</td></tr><tr><td align="left">200</td><td align="left">817</td><td align="left">2017</td></tr><tr><td align="left">168</td><td align="left">830</td><td align="left">2017</td></tr><tr><td align="left">100</td><td align="left">815</td><td align="left">2017</td></tr><tr><td align="left">87</td><td align="left">839</td><td align="left">2017</td></tr><tr><td align="left">54</td><td align="left">832</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">13</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">807</td><td align="left">2017</td></tr><tr><td align="left">40</td><td align="left">840</td><td align="left">2017</td></tr><tr><td align="left">28</td><td align="left">154</td><td align="left">2017</td></tr><tr><td align="left">19</td><td align="left">825</td><td align="left">2017</td></tr><tr><td align="left">17</td><td align="left">4</td><td align="left">2017</td></tr><tr><td align="left">13</td><td align="left">838</td><td align="left">2017</td></tr><tr><td align="left">8</td><td align="left">835</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">826</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">836</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">18</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">814</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">828</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">841</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">842</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">843</td><td align="left">2017</td></tr></tbody></table>
+<p>I would like to augment this dataset with the names of the drivers, so the results would look something like the following:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">points</th><th align="right">driverId</th><th align="left">forename</th><th align="left">surname</th><th align="right">year</th></tr></thead><tbody><tr><td align="right">363</td><td align="right">1</td><td align="left"><em>forename</em></td><td align="left"><em>surname</em></td><td align="right">2017</td></tr></tbody></table>
+<p>Where <em>forename</em> and <em>surname</em> have the real values in.</p>
+<h4>Table Structure</h4>
+<p><img src="content-assets/2019-05-15-code-in-postgresql-inner-join/erd.svg" alt="content-assets/2019-05-15-code-in-postgresql-inner-join/erd.svg"></p>
+<h4>Table Data</h4>
+<h5>races</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">raceId</th><th align="right">year</th><th align="right">round</th><th align="right">circuitId</th><th align="left">name</th><th align="right">date</th><th align="right">time</th><th align="left">url</th></tr></thead><tbody><tr><td align="right">971</td><td align="right">2017</td><td align="right">3</td><td align="right">3</td><td align="left">Bahrain Grand Prix</td><td align="right">2017-04-16</td><td align="right">15:00:00</td><td align="left"><a href="https://en.wikipedia.org/wiki/2017_Bahrain_Grand_Prix">https://en.wikipedia.org/wiki/2017_Bahrain_Grand_Prix</a></td></tr><tr><td align="right">977</td><td align="right">2017</td><td align="right">9</td><td align="right">70</td><td align="left">Austrian Grand Prix</td><td align="right">2017-07-09</td><td align="right">12:00:00</td><td align="left"><a href="https://en.wikipedia.org/wiki/2017_Austrian_Grand_Prix">https://en.wikipedia.org/wiki/2017_Austrian_Grand_Prix</a></td></tr></tbody></table>
+<h5>driverStandings</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">driverStandingsId</th><th align="right">raceId</th><th align="right">driverId</th><th align="right">points</th><th align="right">position</th><th align="left">positionText</th><th align="right">wins</th></tr></thead><tbody><tr><td align="right">64795</td><td align="right">856</td><td align="right">1</td><td align="right">196</td><td align="right">5</td><td align="left">5</td><td align="right">2</td></tr><tr><td align="right">64810</td><td align="right">856</td><td align="right">3</td><td align="right">67</td><td align="right">7</td><td align="left">7</td><td align="right">0</td></tr></tbody></table>
+<h5>drivers</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">driverId</th><th align="left">driverRef</th><th align="right">number</th><th align="left">code</th><th align="left">forename</th><th align="left">surname</th><th align="right">dob</th><th align="left">nationality</th><th align="left">url</th></tr></thead><tbody><tr><td align="right">2</td><td align="left">heidfeld</td><td align="right"></td><td align="left">HEI</td><td align="left">Nick</td><td align="left">Heidfeld</td><td align="right">1977-05-10</td><td align="left">German</td><td align="left"><a href="http://en.wikipedia.org/wiki/Nick_Heidfeld">http://en.wikipedia.org/wiki/Nick_Heidfeld</a></td></tr><tr><td align="right">4</td><td align="left">alonso</td><td align="right">14</td><td align="left">ALO</td><td align="left">Fernando</td><td align="left">Alonso</td><td align="right">1981-07-29</td><td align="left">Spanish</td><td align="left"><a href="http://en.wikipedia.org/wiki/Fernando_Alonso">http://en.wikipedia.org/wiki/Fernando_Alonso</a></td></tr></tbody></table>
+<h4>Implementing the JavaScript</h4>
+<p>If we think about what code we had in the previous article there are two peices of functionality  we're missing. These are:</p>
+<ol>
+<li>The ability to find a row in the <code>drivers</code> table that matches a row in our current result set.</li>
+<li>The ability to mix/join this row from <code>drivers</code> with our current results.</li>
+</ol>
+<p>I'm going to aim to write code that is highly reusable and also still performs well on very large data sets.</p>
+<h5>Finding drivers efficiently</h5>
+<p>The obvious answer to finding a <code>driver</code> from a list of <code>drivers</code> would be to use <code>Array.find()</code>... something lie the following?</p>
+<pre><code class="language-javascript">const assert = require("assert");
+
+
+const drivers = [
+    { driverId: 2, forename: "Lewis", surname: "Hamilton" },
+    { driverId: 14, forename: "Fernando", surname: "Alonso" }
+];
+
+
+/**
+ * Find one `row` within rows that has `value` within the specified `column`.
+ *
+ * @param column string The property within the rows to look within.
+ * @param value number|string The value that column (above) should be.
+ * @param rows Row[] An array of objects to represent rows.
+ * @return Row
+ */
+function arrayFind(column, value, rows) {
+    return rows.find((row) => {
+        return row[column] == value;
+    });
+}
+
+
+assert.equal(arrayFind("driverId", 14, drivers).forename, "Fernando");
+
+
+module.exports = arrayFind;
+</code></pre>
+<p>This is certainly a reusable piece of code and was easy to write and hopefully for you to understand.</p>
+<p>I can see two problems here though.</p>
+<p>The first problem is performance. When we need to look up a <code>driverId</code> we need to scan all the rows in <code>drivers</code> up until the point we find the correct one. We will be doing this for all of the (hypothetically millions of) <code>driverId</code> we want to look up. So I'm pretty sure the performance characteristics of this is not great.</p>
+<p>The other short coming I can see is that it will only ever retreive one row. This is often what we want to acheive, but not always. An example of when this is not enough is when you have one customerId and you want to find / match / join it to all orders in another table.</p>
+<p>The following would perform much better and allow returning multiple rows:</p>
+<h6>sql-spitting-image/_indexBySimple.js</h6>
+<pre><code class="language-javascript">const assert = require("assert");
+
+
+/**
+ * Given an array of Row, index them using a specific column so you can find a
+ * Row quickly without having to `.find()` it.
+ *
+ * @param columnName keyof Row
+ * @param rows Row[]
+ * @return Map&#x3C;Row[columnName],Row>
+ */
+function indexBySimple(columnName, rows) {
+    return rows.reduce((acc, row) => {
+        if (!row.hasOwnProperty(columnName)) { return acc; }
+
+        const k = row[columnName];
+        if (!acc.has(k)) {
+            acc.set(k, []);
+        }
+        acc.get(k).push(row);
+
+        return acc;
+    }, new Map());
+}
+
+
+/**
+ * Given an index, find all rows that have the value
+ *
+ * @param index Map&#x3C;Row[columnName], Row>
+ * @param value Row[columnName]
+ * @return Row[]
+ */
+function findByIndex(value, index) {
+    if (!index.has(value)) { return []; }
+    return index.get(value);
+}
+
+const index = indexBySimple(
+    "driverId",
+    [
+        { driverId: 2, forename: "Lewis", surname: "Hamilton" },
+        { driverId: 14, forename: "Fernando", surname: "Alonso" }
+    ]
+);
+
+assert.equal(
+    findByIndex(14, index)[0].forename,
+    "Fernando"
+);
+
+
+module.exports = { indexBySimple, findByIndex };
+</code></pre>
+<p>The <code>indexBySimple</code> function can scan through the whole set of <code>drivers</code> and fill up a Map with the key being <code>driverId</code> and the values are the actual rows with have that <code>driverId</code>.  Once we have this Map looking up drivers by <code>driverId</code> will become very cheap.</p>
+<h5>Mixing a <code>drivers</code> record with our current results</h5>
+<p>Combining an Object of one type (<code>driverRow</code>) with another (<code>currentResults</code>) is really easy in ES6 because you can simply destruct the objects to create new one like the following</p>
+<pre><code class="language-javascript">    const newObject = {...currentResults, ...driverRow};
+</code></pre>
+<h4>Building the libraries</h4>
+<h6>sql-spitting-image/innerJoinSimple.js</h6>
+<p>Because of all our planning the innerJoinSimple library has become really quite simple.</p>
+<pre><code class="language-javascript">const { indexBySimple } = require('./_indexBySimple');
+
+// interface LeftRow extends Row {
+//     // Here there may be fields
+// }
+// interface RightRow extends Row {
+//     // Here there may be fields
+// }
+
+/**
+ * For every leftRow, combine it with as many as possible rightRow.
+ *
+ * @param leftRows LeftRow[]
+ * @param joinColumns [keyof LeftRow, keyof RightRow] The fields to join
+ * @param rightRows RightRow[]
+ * @return Row[]
+ */
+function innerJoinSimple(leftRows, joinColumns, rightRows) {
+
+    const [leftColumn, rightColumn] = joinColumns;
+
+    /**
+     * Join leftRow to all found foundRightRows
+     *
+     * @param leftRow LeftRow
+     * @param foundRightRows RightRow[]
+     */
+    function joinRows(leftRow, foundRightRows) {
+        return foundRightRows.map(rightRow => {
+            return {...rightRow, ...leftRow};
+        });
+    }
+
+
+    const rightRowIndex = indexBySimple(rightColumn, rightRows);
+
+    let results = [];
+    for (const leftRow of leftRows) {
+        if (rightRowIndex.has(leftRow[leftColumn])) {
+            results = results.concat(
+                joinRows(
+                    leftRow,
+                    rightRowIndex.get(leftRow[leftColumn])
+                )
+            );
+        }
+    }
+
+    return results;
+}
+
+module.exports = innerJoinSimple;
+</code></pre>
+<p>Reading through it you can see that the first thing it does is build an index for the right set of data.</p>
+<p>After this it will read through all of the left set of data, checking if it can be joined to the right, if it can it will be.</p>
+<h4>Libraries</h4>
+<div class="hide-by-header">
+<h6>sql-spitting-image/select.js</h6>
+<pre><code class="language-javascript">function select(spec) {
+
+    function mapper(row) {
+        let r = {};
+        spec.forEach(([theFrom, theTo]) => {
+            r[theTo] = row[theFrom]
+        });
+        return r;
+    }
+
+    return function selectImpl(rows) {
+        return rows.map(mapper);
+    };
+}
+
+
+module.exports = select;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/orderBy.js</h6>
+<pre><code class="language-javascript">/**
+ * Creates a `sortFn` for the JavaScript [Array.prototype.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) function.
+ *
+ * @param columnName string The name of the column to sort by.
+ * @param direction string If this is 'ASC' sort ascending, otherwise descending.
+ * @return (a: number, b: number) => number The `sortFn`.
+ */
+function getSingleCompareFunction(columnName, direction) {
+
+    const flipper = direction.toLowerCase() == 'asc' ? 1 : -1;
+
+    return function singleCompareFunction(rowA, rowB) {
+        return (rowA[columnName] - rowB[columnName]) * flipper;
+    }
+}
+
+
+/**
+ * Orders a set of rows
+ *
+ * @param columnName string
+ * @param direction string ( 'ASC' || 'DESC' )
+ * @param rows Row[]
+ * @return Row[]
+ */
+function orderBy(columnName, direction='ASC') {
+
+    const compareFunction = getSingleCompareFunction(columnName, direction);
+
+    return function(rows) {
+        return rows.sort(compareFunction);
+    };
+}
+
+
+orderBy.getSingleCompareFunction = getSingleCompareFunction;
+module.exports = orderBy;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/orderByMulti.js</h6>
+<pre><code class="language-javascript">const { getSingleCompareFunction } = require('./orderBy');
+
+/**
+ * Gets a `sortFn` for [Array.prototype.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort)
+ * that will sort whole rows based on a list of `columnName` and `direction`
+ * tuples.
+ *
+ * @param colDirectionTuples `[columnName: string, direction: string][]`
+ * Ordering specification where `columnName` and `direction` are parameters from
+ * `getSingleCompareFunction`.
+ * @return (a: Row, b: Row) => number The `sortFn`.
+ */
+function orderByMulti(colDirectionTuples) {
+
+    function compareFunction(rowA, rowB) {
+        return colDirectionTuples.reduce((acc, [col, dir]) => {
+            if (acc != 0) { return acc; }
+            const cf = getSingleCompareFunction(col, dir);
+            return cf(rowA, rowB);
+        }, 0);
+    }
+
+    return function(rows) {
+        return rows.sort(compareFunction);
+    }
+
+}
+
+module.exports = orderByMulti;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/limit.js</h6>
+<pre><code class="language-javascript">/**
+ * Gets the first n rows from a set of rows.
+ *
+ * @param n number
+ * @return (rows: Rows[]) => Rows[]
+ */
+function limit(n) {
+    return function(rows) {
+        return rows.slice(0, n);
+    }
+}
+
+
+module.exports = limit;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/qryTable.js</h6>
+<pre><code class="language-javascript">const { runQuery } = require('./../_utils');
+
+/**
+ * Gets results from a table
+ *
+ * @param table string The of a table to pull from.
+ * @param column The colum to look at to decide when to include a row.
+ * @param values number[] Retreive values where `column` is one of these values.
+ * @return Promise&#x3C;Row[]>
+ */
+function qryTable(table, column=null, values) {
+    if (column === null) {
+        return runQuery(`select * from "${table}"`);
+    }
+    if (values.length == 0) { return []; }
+    const inClause = '(' + values.map((_, i) => '$' + (i + 1)).join(",") + ')';
+    const sql = `
+        select *
+        from "${table}"
+        where "${column}" in ${inClause}`;
+
+    return runQuery(sql, values);
+}
+
+
+module.exports = qryTable;
+</code></pre>
+</div>
+<h4>Main Code</h4>
+<p>The last thing to do is glue all the code together. See below:</p>
+<pre><code class="language-javascript">const { output } = require('./_utils');
+const select = require('./sql-spitting-image/select');
+const orderBy = require('./sql-spitting-image/orderBy');
+const orderByMulti = require('./sql-spitting-image/orderByMulti');
+const limit = require('./sql-spitting-image/limit');
+const qryTable = require('./sql-spitting-image/qryTable');
+const innerJoinSimple = require('./sql-spitting-image/innerJoinSimple');
+
+function addStatic(data) {
+    return function addStaticImpl(rows) {
+        return rows.map(r => {
+            return {...r, ...data};
+        });
+    };
+}
+
+qryTable('races', 'year', [2017])
+    .then(orderBy('round', 'desc'))
+    .then(limit(1))
+    .then((races) => races.map(r => r.raceId))
+    .then((raceIds) => {
+        return Promise.all([
+            qryTable('driverStandings', 'raceId', raceIds),
+            qryTable('drivers') // might as well do in parallel!
+        ]);
+    })
+    .then(([driverStandings, drivers]) => {
+        return innerJoinSimple(
+            driverStandings,
+            ['driverId', 'driverId'],
+            drivers
+        );
+    })
+    .then(orderByMulti([['points', 'desc'], ['driverId', 'asc']]))
+    .then(select([
+        ['points', 'points'],
+        ['driverId', 'driverId'],
+        ['forename', 'forename'],
+        ['surname', 'surname']
+    ]))
+    .then(addStatic({year: 2017}))
+    .then(output)
+    .catch(err => { console.log("ERROR:", err) });
+</code></pre>
+<p>Again we have a rather large amount of code, however I again think it is quite readable.</p>
+<p>Even if you disagree and don't like this code I hope you will agree that this amount of code could easily be wrote quite badly.</p>
+<div class="pro-list">
+<h5>Pro's</h5>
+<ul>
+<li>Broken down quite well into bite size peices.</li>
+<li>A lot of this code is quite reusable, if you wish.</li>
+</ul>
+</div>
+<div class="con-list">
+<h5>Con's</h5>
+<ul>
+<li>There's a lot of it.</li>
+<li>We are again requesting more data than is required.</li>
+</ul>
+</div>
+<h4>The SQL</h4>
+<pre><code class="language-javascript">WITH "lastRaceIn2017" as (
+    SELECT "raceId" FROM races
+    WHERE year = 2017
+    ORDER BY "round" DESC
+    LIMIT 1
+)
+SELECT
+    "driverStandings".points,
+    "driverStandings"."driverId",
+    drivers.forename,
+    drivers.surname,
+    2017 as year
+FROM "driverStandings"
+INNER JOIN drivers ON drivers."driverId" = "driverStandings"."driverId"
+WHERE "raceId" IN ( SELECT "raceId" FROM "lastRaceIn2017" )
+ORDER BY
+    "driverStandings".points DESC,
+    "driverStandings"."driverId" ASC
+</code></pre>
+<div class="pro-list">
+<h4>Pro's</h4>
+<ul>
+<li>Shorter than the JavaScript.</li>
+<li>If this were called by JavaScript we would need only one Promise, which is much easier to write and reason about.</li>
+<li>The <code>INNER JOIN</code> relatively effortlessly mixes in data about drivers into what we had before.</li>
+</ul>
+</div>
+<div class="con-list">
+<h4>Con's</h4>
+<ul>
+<li>There's not much here that's re-usable, other than the knowledge you've acquired.</li>
+</ul>
+</div>
+<link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/tomorrow-night.min.css">
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll('pre code[data-lang]').forEach(
+    (block) => {hljs.highlightBlock(block);}
+  );
+  ["bash", "javascript", "json", "sql"]
+    .forEach(function(lang) {
+      document.querySelectorAll('pre code.language-' + lang).forEach(
+        (block) => {hljs.highlightBlock(block);}
+      );
+    });
+});
+</script>
+<style>
+</style>
+<script>
+</script>
+<p>Tags: <a href='tag_code-in-postgresql.html'>code-in-postgresql</a>, <a href='tag_javascript.html'>javascript</a>, <a href='tag_postgresql.html'>postgresql</a></p>
+
+
+
+<!-- text end -->
+<h3><a class="ablack" href="2019-03-03-code-in-postgresql-in-order-by-limit.html">
+Code In PostgreSQL: You can do lots with just IN, ORDER BY and LIMIT
+</a></h3>
+<!-- bashblog_timestamp: #201903030830.01# -->
+<div class="subtitle">March 03, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h4>This series of articles</h4>
+<p>This is the first of the Code in PostgreSQL series of articles.</p>
+<h5>Articles in this series</h5>
+<ul>
+<li><a href="2019-03-03-code-in-postgresql-in-order-by-limit.html">You can do lots with just IN, ORDER BY and LIMIT</a></li>
+<li><a href="2019-03-12-code-in-postgresql-with.html">You can use WITH to name specific parts of SQL</a></li>
+<li><a href="2019-05-15-code-in-postgresql-inner-join.html">Combining data from multiple tables with INNER JOIN</a></li>
+<li>A NoSQL developer might not know about: GROUP BY ( Soon to be published )</li>
+<li>Sub select ( Soon to be published )</li>
+<li>Variables ( Soon to be published )</li>
+<li>Prepare JSON ( Soon to be published )</li>
+<li>Create Function (and testing it) ( Soon to be published )</li>
+<li>Custom Aggregates ( Soon to be published )</li>
+</ul>
+<h5>The reason why SQL is so important</h5>
+<p>When developing systems we often have a choice of writing code (NodeJS, C#, Python or PHP etc) or SQL. I believe that sometimes the decision to write code is taken without fully evaluating how much of the task could be offloaded to SQL.</p>
+<p>In this series of articles I wish to show the huge benefits of using and learning SQL by examining progressively more difficult scenarios with increasing amounts of SQL knowledge. In doing this I hope to illustrate that sometimes large amounts of extra code is written for what SQL can achieve quicker, with less complexity and more readability.</p>
+<p>To be more specific, we should try to follow the <a href="https://en.wikipedia.org/wiki/Rule_of_least_power">rule of least power</a> more often.</p>
+<h5>About the Ergast data set</h5>
+<p>For this series of articles we will be using the <a href="https://ergast.com/mrd">Ergast</a> data set, which is a provided under the <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">Attribution-NonCommercial-ShareAlike 3.0 Unported Licence</a>.</p>
+<h5>Setting up the Ergast database within PostgreSQL</h5>
+<p>To set up the <a href="https://ergast.com/mrd">Ergast</a> database within PostgreSQL I did the following:</p>
+<p>I allowed <code>psql</code> and friends to work without me having to put in a password all the time by configuring the <a href="https://www.postgresql.org/docs/current/libpq-envars.html">PostgreSQL environmental variables</a>.</p>
+<pre><code class="language-bash">export PGUSER=postgres PGPASSWORD=postgres PGDATABASE=postgres PGHOST=127.0.0.1
+</code></pre>
+<p>Then import the <a href="http://ergast.com/">Ergast</a> database. NOTE: At the time of writing I was unable to install the PostgreSQL version.</p>
+<pre><code class="language-bash">wget -O /tmp/f1db_ansi.sql.gz http://ergast.com/downloads/f1db_ansi.sql.gz
+cat /tmp/f1db_ansi.sql.gz | \
+    gzip -d | \
+    sed 's/int(..)/int/' | \
+    sed 's/ \+AUTO_INCREMENT//' | \
+    sed "s/\\\'/\'\'/g" | \
+    sed 's/UNIQUE KEY \"\(\w\+\)\"/UNIQUE /' | \
+    sed 's/^ *KEY .*(\"\(.*\)\")/CHECK ("\1" > 0)/' | \
+    sed 's/ date NOT NULL DEFAULT .0000.*,/ date,/'| psql
+</code></pre>
+<h5>Assumed level of SQL Knowledge</h5>
+<p>In this JavaScript example we will assume the writer has sufficient SQL knowledge to use a <code>WHERE</code> statement along with the ability to only return certain fields using <code>SELECT</code>. After this we will see how this can be accomplished in one single SQL statement using <code>IN</code>, <code>ORDER BY</code> and <code>LIMIT</code>.</p>
+<h4>The aim</h4>
+<p>Lets say you want to find out the final points for drivers in the 2017 Formula 1 World Championship. The schema for the tables we will be using is as follows:</p>
+<p><img src="content-assets/2019-03-03-code-in-postgresql-in-order-by-limit/erd.svg" alt="content-assets/2019-03-03-code-in-postgresql-in-order-by-limit/erd.svg"></p>
+<p>An example of the data you would find in these tables is shown below:</p>
+<h6>races</h6>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">raceId</th><th align="right">year</th><th align="right">round</th><th align="right">circuitId</th><th>name</th><th>date</th><th>time</th><th>url</th></tr></thead><tbody><tr><td align="right">969</td><td align="right">2017</td><td align="right">1</td><td align="right">1</td><td>Australian Grand Prix</td><td>2017-03-26</td><td>05:00:00</td><td><a href="https://en.wikipedia.org/wiki/2017_Australian_Grand_Prix">https://en.wikipedia.org/wiki/2017_Australian_Grand_Prix</a></td></tr><tr><td align="right">970</td><td align="right">2017</td><td align="right">2</td><td align="right">17</td><td>Chinese Grand Prix</td><td>2017-04-09</td><td>06:00:00</td><td><a href="https://en.wikipedia.org/wiki/2017_Chinese_Grand_Prix">https://en.wikipedia.org/wiki/2017_Chinese_Grand_Prix</a></td></tr><tr><td align="right">971</td><td align="right">2017</td><td align="right">3</td><td align="right">3</td><td>Bahrain Grand Prix</td><td>2017-04-16</td><td>15:00:00</td><td><a href="https://en.wikipedia.org/wiki/2017_Bahrain_Grand_Prix">https://en.wikipedia.org/wiki/2017_Bahrain_Grand_Prix</a></td></tr><tr><td align="right">972</td><td align="right">2017</td><td align="right">4</td><td align="right">71</td><td>Russian Grand Prix</td><td>2017-04-30</td><td>12:00:00</td><td><a href="https://en.wikipedia.org/wiki/2017_Russian_Grand_Prix">https://en.wikipedia.org/wiki/2017_Russian_Grand_Prix</a></td></tr><tr><td align="right">973</td><td align="right">2017</td><td align="right">5</td><td align="right">4</td><td>Spanish Grand Prix</td><td>2017-05-14</td><td>12:00:00</td><td><a href="https://en.wikipedia.org/wiki/2017_Spanish_Grand_Prix">https://en.wikipedia.org/wiki/2017_Spanish_Grand_Prix</a></td></tr></tbody></table>
+<h6>driversStandings</h6>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">driverStandingsId</th><th align="right">raceId</th><th align="right">driverId</th><th align="right">points</th><th align="right">position</th><th>positionText</th><th align="right">wins</th></tr></thead><tbody><tr><td align="right">64782</td><td align="right">855</td><td align="right">3</td><td align="right">63</td><td align="right">7</td><td>7</td><td align="right">0</td></tr><tr><td align="right">64795</td><td align="right">856</td><td align="right">1</td><td align="right">196</td><td align="right">5</td><td>5</td><td align="right">2</td></tr><tr><td align="right">64797</td><td align="right">856</td><td align="right">4</td><td align="right">212</td><td align="right">3</td><td>3</td><td align="right">1</td></tr><tr><td align="right">64805</td><td align="right">856</td><td align="right">2</td><td align="right">34</td><td align="right">10</td><td>10</td><td align="right">0</td></tr><tr><td align="right">64810</td><td align="right">856</td><td align="right">3</td><td align="right">67</td><td align="right">7</td><td>7</td><td align="right">0</td></tr></tbody></table>
+<p>The <code>driverStandings</code> table has the points for every driver in every race. The problem here is that there is no record in the <code>driverStandings</code> table for which season a <code>raceId</code> belongs to. So we need to get a bit creative... Here is one possible solution:</p>
+<ol>
+<li>Looking at the <code>races</code> table's <code>year</code> column, we can find all the <code>raceId</code> in 2017.</li>
+<li>If we can get all <code>races</code> in a given <code>year</code> we should be able to get the last race because the <code>round</code> will be the highest within that year.</li>
+<li>Find the <code>points</code> and <code>driverId</code> for the drivers who were in that <code>raceId</code> by reading the <code>driverStandings</code> table.</li>
+<li>Sort them by <code>points</code> descending.</li>
+<li>The very first row contains the <code>driverId</code> which has the most points in that season. This <code>driverId</code> is the world champion. The ones later on denote their final position (assuming the points differ).</li>
+</ol>
+<h4>Implementing the JavaScript</h4>
+<h5>Libraries</h5>
+<div class="hide-by-header">
+<h6>sql-spitting-image/limit.js</h6>
+<pre><code class="language-javascript">/**
+ * Gets the first n rows from a set of rows.
+ *
+ * @param n number
+ * @return (rows: Rows[]) => Rows[]
+ */
+function limit(n) {
+    return function(rows) {
+        return rows.slice(0, n);
+    }
+}
+
+
+module.exports = limit;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/select.js</h6>
+<pre><code class="language-javascript">function select(spec) {
+
+    function mapper(row) {
+        let r = {};
+        spec.forEach(([theFrom, theTo]) => {
+            r[theTo] = row[theFrom]
+        });
+        return r;
+    }
+
+    return function selectImpl(rows) {
+        return rows.map(mapper);
+    };
+}
+
+
+module.exports = select;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/orderBy.js</h6>
+<pre><code class="language-javascript">/**
+ * Creates a `sortFn` for the JavaScript [Array.prototype.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) function.
+ *
+ * @param columnName string The name of the column to sort by.
+ * @param direction string If this is 'ASC' sort ascending, otherwise descending.
+ * @return (a: number, b: number) => number The `sortFn`.
+ */
+function getSingleCompareFunction(columnName, direction) {
+
+    const flipper = direction.toLowerCase() == 'asc' ? 1 : -1;
+
+    return function singleCompareFunction(rowA, rowB) {
+        return (rowA[columnName] - rowB[columnName]) * flipper;
+    }
+}
+
+
+/**
+ * Orders a set of rows
+ *
+ * @param columnName string
+ * @param direction string ( 'ASC' || 'DESC' )
+ * @param rows Row[]
+ * @return Row[]
+ */
+function orderBy(columnName, direction='ASC') {
+
+    const compareFunction = getSingleCompareFunction(columnName, direction);
+
+    return function(rows) {
+        return rows.sort(compareFunction);
+    };
+}
+
+
+orderBy.getSingleCompareFunction = getSingleCompareFunction;
+module.exports = orderBy;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/orderByMulti.js</h6>
+<pre><code class="language-javascript">const { getSingleCompareFunction } = require('./orderBy');
+
+/**
+ * Gets a `sortFn` for [Array.prototype.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort)
+ * that will sort whole rows based on a list of `columnName` and `direction`
+ * tuples.
+ *
+ * @param colDirectionTuples `[columnName: string, direction: string][]`
+ * Ordering specification where `columnName` and `direction` are parameters from
+ * `getSingleCompareFunction`.
+ * @return (a: Row, b: Row) => number The `sortFn`.
+ */
+function orderByMulti(colDirectionTuples) {
+
+    function compareFunction(rowA, rowB) {
+        return colDirectionTuples.reduce((acc, [col, dir]) => {
+            if (acc != 0) { return acc; }
+            const cf = getSingleCompareFunction(col, dir);
+            return cf(rowA, rowB);
+        }, 0);
+    }
+
+    return function(rows) {
+        return rows.sort(compareFunction);
+    }
+
+}
+
+module.exports = orderByMulti;
+</code></pre>
+</div>
+<h5>Main Code</h5>
+<pre><code class="language-javascript">const { takeOne, runQuery, output } = require('./_utils');
+const limit = require('./sql-spitting-image/limit');
+const select = require('./sql-spitting-image/select');
+const orderBy = require('./sql-spitting-image/orderBy');
+const orderByMulti = require('./sql-spitting-image/orderByMulti');
+
+
+/**
+ * interface RaceResult { round: number; raceId: number; }
+ * interface MainResult { points: number; driverId: number; year: number; }
+ */
+
+
+/**
+ * Get data from the `results` table.
+ *
+ * @param year number
+ * @return Promise&#x3C;RaceResult[]>
+ */
+function qryRaces(year) {
+    return runQuery('select "round", "raceId" from races where year = $1', [year]);
+}
+
+
+/**
+ * Gets all driver standings at a given set of raceIds
+ *
+ * @param raceId number
+ * @return Promise&#x3C;MainResult[]>
+ */
+function qryStandings(raceId) {
+
+    const sql = `
+        select
+        "driverStandings".points,
+        "driverStandings"."driverId",
+        2017 as year
+        from "driverStandings"
+        where "raceId" = $1
+        `;
+    return runQuery(sql, [raceId]);
+
+}
+
+
+qryRaces(2017)
+    .then(orderBy('round', 'desc'))
+    .then(limit(1))
+    .then((rounds) => rounds.map(r => r.raceId))
+    .then(takeOne)
+    .then(qryStandings)
+    .then(orderByMulti([['points', 'desc'], ['driverId', 'asc']]))
+    .then(select([
+        ["points", "points"],
+        ["driverId", "driverId"],
+        ["year" , "year"]
+    ]))
+    .then(output)
+    .catch(err => {
+        console.log("ERROR:", err);
+        process.exit(1);
+    });
+</code></pre>
+<p>This code, despite there being a lot of it is relatively straight forward. We get a list of <code>raceId</code> and <code>round</code> from the <code>qryRaces</code> function. Once we have this we will order by the <code>round</code> from largest to smallest and take the first one. This is the last race of the season.</p>
+<p>After this we feed that <code>raceId</code> directly into the <code>qryStandings</code> functions to get the results from the last race. Finally we are forced to use a more complicated sorting function for stability, because some drivers have the same amount of points before presenting our desired columns.</p>
+<div class="pro-list">
+<h5>Pro's</h5>
+<ul>
+<li>There's some nice re-usable functions here.</li>
+<li>The main code is quite concise and easy to understand.</li>
+</ul>
+</div>
+<div class="con-list">
+<h5>Con's</h5>
+<ul>
+<li>Longer than SQL</li>
+<li>We downloaded more data than necessary, in this case it is not too bad but it could have been much worse.</li>
+</ul>
+</div>
+<h4>SQL</h4>
+<pre><code class="language-sql">SELECT
+    "driverStandings".points,
+    "driverStandings"."driverId",
+    2017 as year
+FROM "driverStandings"
+WHERE "raceId" IN (
+    SELECT "raceId" FROM races
+    WHERE year = 2017
+    ORDER BY "round" DESC
+    LIMIT 1
+)
+ORDER BY
+    "driverStandings".points DESC,
+    "driverStandings"."driverId" ASC
+</code></pre>
+<p>Like the JavaScript we are using ordering (<code>ORDER BY</code>) and limiting (<code>LIMIT</code>) to get the highest <code>raceId</code> within 2017.</p>
+<p>The <code>IN</code> clause can be used to match a column against a set of numbers. For example we may choose to write <code>WHERE "raceId" IN (4, 5, 7)</code> which would be the same thing as writing <code>WHERE "raceId" = 4 OR "raceId" = 5 OR "raceId" = 7</code>.</p>
+<p>The smart thing here is that we are using a query to get the last <code>raceId</code> within the <code>IN</code> clause instead of a directly specified list of <code>raceId</code>.</p>
+<p>Finally an <code>ORDER BY</code> statement is used to perform sorting of the final record set, you can sort by multiple fields or use many types of expressions.</p>
+<div class="pro-list">
+<h5>Pro's</h5>
+<ul>
+<li>Shorter than the JavaScript.</li>
+<li>If this were called by JavaScript we would need only one Promise, which is much easier to write and reason about.</li>
+<li>The inside of the <code>IN</code> clause can be ran and understood individually.</li>
+</ul>
+</div>
+<div class="con-list">
+<h5>Con's</h5>
+<ul>
+<li>Is the <code>ORDER BY</code> / <code>LIMIT 1</code> a trick?</li>
+<li>It seems in code you can give the contents of IN clause a name (<code>raceIds</code>) but this is not possible using SQL's <code>IN</code>, [or is it?]({% post_url 2019-03-12-code-in-postgresql-with %}).</li>
+</ul>
+</div>
+<h4>Results</h4>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">points</th><th align="left">driverId</th><th align="left">year</th></tr></thead><tbody><tr><td align="left">363</td><td align="left">1</td><td align="left">2017</td></tr><tr><td align="left">317</td><td align="left">20</td><td align="left">2017</td></tr><tr><td align="left">305</td><td align="left">822</td><td align="left">2017</td></tr><tr><td align="left">205</td><td align="left">8</td><td align="left">2017</td></tr><tr><td align="left">200</td><td align="left">817</td><td align="left">2017</td></tr><tr><td align="left">168</td><td align="left">830</td><td align="left">2017</td></tr><tr><td align="left">100</td><td align="left">815</td><td align="left">2017</td></tr><tr><td align="left">87</td><td align="left">839</td><td align="left">2017</td></tr><tr><td align="left">54</td><td align="left">832</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">13</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">807</td><td align="left">2017</td></tr><tr><td align="left">40</td><td align="left">840</td><td align="left">2017</td></tr><tr><td align="left">28</td><td align="left">154</td><td align="left">2017</td></tr><tr><td align="left">19</td><td align="left">825</td><td align="left">2017</td></tr><tr><td align="left">17</td><td align="left">4</td><td align="left">2017</td></tr><tr><td align="left">13</td><td align="left">838</td><td align="left">2017</td></tr><tr><td align="left">8</td><td align="left">835</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">826</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">836</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">18</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">814</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">828</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">841</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">842</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">843</td><td align="left">2017</td></tr></tbody></table>
+<link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/tomorrow-night.min.css">
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll('pre code[data-lang]').forEach(
+    (block) => {hljs.highlightBlock(block);}
+  );
+  ["bash", "javascript", "json", "sql"]
+    .forEach(function(lang) {
+      document.querySelectorAll('pre code.language-' + lang).forEach(
+        (block) => {hljs.highlightBlock(block);}
+      );
+    });
+});
+</script>
+<style>
+</style>
+<script>
+</script>
+<p>Tags: <a href='tag_code-in-postgresql.html'>code-in-postgresql</a>, <a href='tag_javascript.html'>javascript</a>, <a href='tag_postgresql.html'>postgresql</a>, <a href='tag_postgresql.html'>postgresql</a></p>
+
+
+
+<!-- text end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

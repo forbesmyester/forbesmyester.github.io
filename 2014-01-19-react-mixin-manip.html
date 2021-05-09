@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>React Mixin Manip</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2014-01-19-react-mixin-manip.html">
+React Mixin Manip
+</a></h3>
+<!-- bashblog_timestamp: #201401190830.01# -->
+<div class="subtitle">January 19, 2014 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I have created a simple <a href="https://gist.github.com/forbesmyester/8469940">React Mixin</a> which enables you to use the power of <a href="https://github.com/forbesmyester/manip">Manip</a> with the awsomeness of <a href="http://facebook.github.io/">React</a>.</p>
+<p>When you want to alter data within React you can use the <code>component.setState()</code> or <code>component.setProps()</code> methods. This is wonderful if you want to modify top level data... But that is not always the case, consider how the following data may be rendered with React:</p>
+<pre><code>{
+    jack: { hair: 'brown', eyes: 'blue', age: 4 },
+    jane: { hair: 'blonde', eyes: 'brown', age: 2 },
+    jill: { hair: 'red', eyes: 'blue', age: 7 }
+}
+</code></pre>
+<p>This would probably be outputted using the following code:</p>
+<pre><code>React.renderComponent(
+    &#x3C;Output data={data}/>,
+    document.getElementById('...')
+);
+</code></pre>
+<p>Now suppose that somehow you know Jill's age is now 8, or maybe only that her age has increased by one. It may be, depending on where you are in the code that you still have access to all the data, but it is also quite possible you do not.</p>
+<p>In this situation it is impossible for you to use <code>component.setProps()</code> because it will also overwrite all information about everyone else! Infact given the documented external API's of a React component it is impossible for you to perform the required manipulation without significant bespoke work. The aim of React_Mixin_Manip is to make this job much more simple....</p>
+<p>See the example below:</p>
+<pre><code>// Create a React class to show nested data and which uses the
+// React_Mixin_Manip mixin.
+var Output = React.createClass({
+
+    mixins: [React_Mixin_Manip],
+
+    render: function() {
+
+        var nodes = [];
+        for (var k in this.props.peopleData) {
+            if (this.props.peopleData.hasOwnProperty(k)) {
+                nodes.push(&#x3C;dt>{k}&#x3C;/dt>);
+                nodes.push(&#x3C;dd>{JSON.stringify(this.props.peopleData[k])}&#x3C;/dd>);
+            }
+        }
+
+        return (
+            &#x3C;div>
+                &#x3C;dl>{nodes}&#x3C;/dl>
+            &#x3C;/div>
+        );
+    }
+});
+
+var getData = function() {
+    return {
+        jack: { hair: 'brown', eyes: 'blue', age: 4 },
+        jane: { hair: 'blonde', eyes: 'brown', age: 2 },
+        jill: { hair: 'red', eyes: 'blue', age: 7 }
+    };
+};
+
+// Render the above component into the HTML
+var output = React.renderComponent(
+        &#x3C;Output peopleData={getData()} />,
+        document.getElementById('example')
+    );
+
+// After 1.5 seconds fiddle with the data within the component using
+// manip... Note that this is impossible to write using the React
+// `setProps()` method.
+setTimeout(function() {
+    output.manip(
+        false,
+        {'$inc': {'peopleData.jill.age': 1}},
+        function() {
+            console.log("Manipulation Done!");
+        }
+    );
+}, 1500);
+</code></pre>
+<p>After 1.5 seconds the age of Jill will be increased by one. In this situation it is impossible to access the original data from within the <code>setTimeout()</code> call. Using React_Mixin_Manip has provided a reasonably clean way to perform the required manipulation with very little work.</p>
+<p>Note: The reason this has been released as a Gist instead of a full GitHub repository is that I am not sure on a sensible way to test it... It will become a repository when I either figure out the testing or when I need it as a repository to use with <a href="https://npmjs.org">NPM</a> or <a href="http://bower.io/">Bower</a>.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

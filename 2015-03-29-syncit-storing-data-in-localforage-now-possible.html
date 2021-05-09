@@ -1,0 +1,39 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>SyncIt: Storing Data In LocalForage Now Possible</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2015-03-29-syncit-storing-data-in-localforage-now-possible.html">
+SyncIt: Storing Data In LocalForage Now Possible
+</a></h3>
+<!-- bashblog_timestamp: #201503290830.01# -->
+<div class="subtitle">March 29, 2015 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Over the last few weeks I've done a few commits making storing data in <a href="https://mozilla.github.io/localForage/">LocalForage</a> possible. I knew this would be quite easy as even though <a href="https://github.com/forbesmyester/SyncIt">SyncIt</a> has up to now only been backed by LocalStorage it was wrapped in a way that all access to data had to be done via asyncronous callbacks, infact all but one of the API access points to the underlying storage were identical except one.</p>
+<p>One thing I have noticed is that LocalStorage on Chrome really slows down as you start putting more and more data into it where as LocalForage, which uses <a href="http://www.w3.org/TR/IndexedDB/">IndexedDB</a> on Chrome starts off initially slower but doesn't really seem to slow down at all, or at least slows down much slower.</p>
+<p>So when I'm considering storage client side, I will only really be thinking of LocalStorage when I <strong>know</strong> the data will not grow, for everything else, from now on I'm going to use LocalForage.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

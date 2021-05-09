@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Require Parts</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2015-07-04-require-parts.html">
+Require Parts
+</a></h3>
+<!-- bashblog_timestamp: #201507040830.01# -->
+<div class="subtitle">July 04, 2015 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Noticed this when requiring <a href="http://ramdajs.com/">Ramda</a>:</p>
+<pre><code>[BABEL] Note: The code generator has deoptimised the styling of "/home/fozz/Projects/siac-ui/node_modules/ramda/dist/ramda.js" as it exceeds the max of "100KB".
+</code></pre>
+<p>Now I love Ramda, you should read about, it's awesome, but I am only actually using a few functions from it in this project and this is overkill... So instead I did:</p>
+<pre><code>var R = { zipObj: require('ramda/src/zipObj.js') };
+</code></pre>
+<p>which is all well and fine but I kept adding to this this and it became a bit of a pain...</p>
+<pre><code>var R = {
+    assocPath: require('ramda/src/assocPath.js'),
+    defaultTo: require('ramda/src/defaultTo.js'),
+    partition: require('ramda/src/partition.js'),
+    pipe: require('ramda/src/pipe.js'),
+    reduce: require('ramda/src/reduce.js')
+};
+</code></pre>
+<p>so I created <a href="https://github.com/forbesmyester/require-parts">this micro library</a>. It can be used like the following:</p>
+<pre><code>var requireParts = require('require-parts');
+var R = requireParts('ramda', 'src', ['zipObj.js', 'min.js']);
+</code></pre>
+<p>This works for modules installed with NPM, doesn't seem to work with Babel, but there is a <a href="https://github.com/forbesmyester/require-parts-babel">Babel Plugin</a> which does the same job.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

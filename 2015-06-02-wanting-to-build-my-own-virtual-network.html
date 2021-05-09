@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Wanting to build my own Virtual Network</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2015-06-02-wanting-to-build-my-own-virtual-network.html">
+Wanting to build my own Virtual Network
+</a></h3>
+<!-- bashblog_timestamp: #201506020830.01# -->
+<div class="subtitle">June 02, 2015 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>When I was about 18 and living at my parents, my bedroom was full of old computers which I'd turned into servers and managed to wire up using a BNC network and HowTo's printed out on the college computers... I didn't have internet access. I tought myself TCP/IP networking through trial and error, compiled QMail and DJBDNS, figured out Apache, SAMBA and later, when I managed to get an internet connection I built a Firewall from OpenBSD! Doing this gave me a firm grasp of the lower level technology which makes the connected world we love, run.</p>
+<p>Later on virtualization appeared, again I was compiling but this was Xen Hypervisors and had a small virtual network but it didn't really scale very well on the old machines of the day. Somewhat recently I discovered <a href="https://www.vagrantup.com">Vagrant</a> and have been provisioning using <a href="http://www.ansible.com/home">Ansible</a>, which is awesome but now as a professional software developer I find myself wanting to run many many servers, some are for development and <a href="https://github.com/EugeneKay/subsonic">others like SubSonic</a> should run all the time.</p>
+<p>This proliferation of smaller development servers and longer running services which I and my wife sometimes rely on has caused me to start to use <a href="https://www.docker.com/">Docker</a>, but the thing that bothers me is there's not really a way to tie all the bits together. What I want to have is an automatically managed DNS name that points to my SubSonic installation and not have to remember a silly port.</p>
+<p>In researching this I found an <a href="http://jasonwilder.com/blog/2014/03/25/automated-nginx-reverse-proxy-for-docker/">amazing blog post by Jason Wilder</a> where he's using the Docker API to trigger builds of Nginx configuration files. He has even created a Dockerized version so if you can get get 'subsonic.yourdomain.com' to resolve to the Nginx installation it will proxy it through to the real Docker running the real service. The only thing that's required for this awesomeness is to include <code>VIRTUAL_HOST</code> and <code>VIRTUAL_PORT</code> environmental variables to Docker when launching the service... Very easy when using <a href="https://docs.docker.com/compose/">docker-compose</a> (a working configuration file looks like <a href="https://github.com/forbesmyester/subsonic-docker/blob/master/docker-compose.yml">this</a>). This is perfect because configuration is stored in exactly the place where configuration should be stored, where the service is described.</p>
+<p>The only thing that's required to do is get the DNS resolving... Well I played with an installation of <a href="http://maradns.samiam.org/">maradns</a> for a bit, and in of itself it worked really well. The problem was that I didn't really understand what Ubuntu is doing with the <code>/etc/resolv.conf</code> file and I couldn't get it to talk to the port maradns was running on so I gave up that idea. In the end I created a <a href="https://gist.github.com/forbesmyester/c10f72d56646b833aa4f">really hacky bash script</a> which is using lots of stolen tech from Jason Wilder to squirt <code>127.0.0.1   host.yourdomain.com</code>'s to the bottom of your /etc/resolv.conf file. It's dirty, but it does work.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "= BEGIN ================="
+FILENAME="$1"
+echo "PROCESSING FILE: $FILENAME"
+FILENAME_HTML="$(echo "$FILENAME" | sed 's/md$/html/')"
+DATE="$(echo "$FILENAME" | cut -d '-' -f 1,2,3 | sed 's/\-//g')0830.01"
+touch "$FILENAME_HTML"
+echo "== BB START =="
+env EDITOR=echo bb.sh edit "$FILENAME"
+echo "== BB END ===="
+sed 's/\(<!-- bashblog_timestamp: #\).*\(# -->\)/\1'"$DATE"'\2/' -i "$FILENAME_HTML"
+echo "= END ==================="
+

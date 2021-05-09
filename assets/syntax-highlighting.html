@@ -1,0 +1,16 @@
+<link rel="stylesheet"
+      href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/tomorrow-night.min.css">
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll('pre code[data-lang]').forEach(
+    (block) => {hljs.highlightBlock(block);}
+  );
+  ["bash", "javascript", "json", "sql"]
+    .forEach(function(lang) {
+      document.querySelectorAll('pre code.language-' + lang).forEach(
+        (block) => {hljs.highlightBlock(block);}
+      );
+    });
+});
+</script>

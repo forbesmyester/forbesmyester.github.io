@@ -1,0 +1,78 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Require.JS Shims - Working with Non AMD code</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2013-09-20-require_js-shims-working-with-non-amd-code.html">
+Require.JS Shims - Working with Non AMD code
+</a></h3>
+<!-- bashblog_timestamp: #201309200830.01# -->
+<div class="subtitle">September 20, 2013 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I'm pretty much settled on using <a href="http://requirejs.org/">Require.JS</a> for loading front end JavaScript code because:</p>
+<ol>
+<li>I like the way it allows me to precisely control the libraries that are available within a JavaScript file.</li>
+<li>Gives me the ability to write small re-usable libraries, thus aiding re-usability.</li>
+<li>Avoids polluting the global namespace.</li>
+<li>My JavaScript can be easily minified.</li>
+</ol>
+<p>The only problem is that it seems that there are lots of great libraries that are not yet using AMD...</p>
+<p>So I'm coding along quite happily and what I want to do is take a data structure and convert it into HTML. Now I know I could use some form of micro template but in this situation I'm not really substituting data into HTML but representing the data I have as a HTML structure, which is a subtle but important difference.</p>
+<p>Recently I've been looking at Functional Programming a lot and have come across a library called <a href="https://github.com/weavejester/hiccup">Hiccup</a> which does exactly the job I need but it's wrote for Clojure. As the shortest introduction possible to a library it would take the Clojure equivalent of:</p>
+<pre><code>[span {"class": "foo"} "bar"]
+</code></pre>
+<p>and return the HTML data structure:</p>
+<pre><code>&#x3C;span class="foo">bar&#x3C;/span>
+</code></pre>
+<p>I set about finding a library that does something similar for JavaScript and in the end I found <a href="https://github.com/lynaghk/singult">Singult</a>.</p>
+<p>The major downside of Singult for me is that it adds a global under the name <code>singult</code>. I don't like the idea of fiddling with source files or maintaining my own Require.JS version in a GitHub fork but I still need a way to live with their code in my new shiny AMD world.</p>
+<p>I had previously stumbled upon the <a href="https://github.com/tbranyen/use.js">use.js</a> library which allows you to shim non AMD code into AMD quite easily but it now seems that the new way to do this is to use <a href="http://requirejs.org/docs/api.html#config-shim">Require.JS shims</a></p>
+<p>If you're using Require.JS your HTML will probably include something like the following:</p>
+<pre><code>&#x3C;script data-main="/js/main" src="/vendor-bower/requirejs/require.js">&#x3C;/script>
+</code></pre>
+<p>Add shim to your Require.JS configuration stored in your "main.js" file:</p>
+<pre><code>require.config({
+    baseUrl: '/js',
+    paths: {
+        singult: "/vendor/github.com/lynaghk/singult/singult.min"
+    },
+    shim: {
+        singult: {
+            deps: [],
+            exports: 'singult'
+        }
+    }
+});
+</code></pre>
+<p>In this situation I am telling Require.JS where to find Singult in the "paths" section and also telling it that it has no dependencies (<code>deps</code>) and that <code>singult</code> should be exported from the global namespace (<code>exports</code>).</p>
+<p>To use the library all you need to do is include the key from "paths" and your library will come in as if it were a proper AMD library:</p>
+<pre><code>define(['singult'], function(singult) {
+    // code
+});
+</code></pre>
+<p>It's not the perfect solution because it does leave the global available, but this does at least mean that you can centrally configure the dependencies and write your code using modern development practices.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>ndjson-env - Loads environment from ndjson files, selected by <code>jq ._name</code></title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2019-07-24-ndjson-env.html">
+ndjson-env - Loads environment from ndjson files, selected by <code>jq ._name</code>
+</a></h3>
+<!-- bashblog_timestamp: #201907240830.01# -->
+<div class="subtitle">July 24, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h4>Description</h4>
+<p>I have a tool called <a href="https://github.com/forbesmyester/psql-tools#pgpass-env">pgpass-env</a> that, given a suitably commented PostgreSQL <code>~/.pgpass</code> file will allow you to easily set the environmental variables for software that doesn't support reading from that format.</p>
+<p>Thinking about this problem, it seems to be a general problem:</p>
+<ul>
+<li>Given a file, which somehow has a list of sets of values of environmental variables you may want to apply.</li>
+<li>And a way to identify which values you wish to apply.</li>
+<li>Apply those environmental variables.</li>
+</ul>
+<p>This is what this software does.</p>
+<h4>Example</h4>
+<p>The environmental variables are stored in any file as NDJSON. For example a file that sets up environmental variables for the JDK might look something like this:</p>
+<pre><code>{"_name": "JDK18", "JAVA_HOME": "/use/local/j2sdk-1.8"}
+{"_name": "JDK111", "JAVA_HOME": "/use/local/j2sdk-1.11", "CLASSPATH": "/somewhere/else"}
+</code></pre>
+<p>This could might be stored in <code>~/.jdk-env-vars</code>, if it were you could apply the <code>JDK111</code> environmental variables using the following:</p>
+<pre><code class="language-bash">. ndjson-env -f ~/.jdk-env-vars JDK111
+</code></pre>
+<p>Once you've ran this the <code>JAVA_HOME</code> and <code>CLASSPATH</code> environmental variables will be set up. NOTE: The <code>.</code> before the command is important, it pulls the environmental variables defined in the script into your current environment.</p>
+<h4>Usage</h4>
+<pre><code>NAME:
+  ndjson-env - Loads environment from ndjson files, selected by `jq ._name`
+
+USAGE:
+  ndjson-env -f FILE [NAME_OF_ENV_SET]
+
+GLOBAL OPTIONS:
+  -f    The file to load environment sets from
+  -h    Get (this) help
+
+ARGUMENTS:
+  NAME_OF_ENV_SET    The name of the environment to list (will list all if not specified)
+</code></pre>
+<h4>Installation</h4>
+<p>Installation is simple with BASH:</p>
+<pre><code class="language-shell">mkdir -p ~/.local/bin &#x26;&#x26; cp ./ndjson-env ~/.local/bin/ndjson-env &#x26;&#x26; chmod +x ~/.local/bin/ndjson-env
+</code></pre>
+<p>You can find this project at <a href="https://github.com/forbesmyester/ndjson-env">GitHub</a>.
+Tags: postgresql, unix, linux, environmental variables</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

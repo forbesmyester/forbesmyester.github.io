@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -euo pipefail
+IFS=$'\n\t'
+
+export PATH=".:$PWD/matts-markdown-tools:$PATH"
+
+if [ ! -d "matts-markdown-tools/node_modules" ]; then
+    echo no tools
+    cd matts-markdown-tools
+    npm install
+    cd ../
+fi
+
+find *.html | grep '^[0-9]\{4\}' | parallel --halt now,fail=1 rm {} || true
+find *.md -maxdepth 1 | grep '^[0-9]\{4\}' | parallel -j1 --halt now,fail=1 publish-dated-md {}
+
+bb.sh rebuild

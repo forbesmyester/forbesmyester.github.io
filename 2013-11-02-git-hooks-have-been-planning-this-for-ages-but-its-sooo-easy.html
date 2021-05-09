@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Git Hooks... Have been planning this for ages but it's sooo easy!</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2013-11-02-git-hooks-have-been-planning-this-for-ages-but-its-sooo-easy.html">
+Git Hooks... Have been planning this for ages but it's sooo easy!
+</a></h3>
+<!-- bashblog_timestamp: #201311020830.01# -->
+<div class="subtitle">November 02, 2013 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Currently when I get home from work and I want a bit of a change I'll do a bit of work learning Clojure, which at the moment is writing a script to generate HTML photo albums from a directory structure with images... I'm looking forward to getting it working and then <a href="http://pragprog.com/book/shcloj2/programming-clojure">continuing to read, learning new tricks</a> and slowly improving it. Right now though it's still not functioning, so watch my <a href="https://github.com/forbesmyester">GitHub Account</a> for some really bad Clojure code appearing soon!</p>
+<p>Aside from the learning Clojure aspect I want to store my photo's in <a href="http://git-annex.branchable.com/">Git Annex</a> so I can share the photo albums seemlessly with my wife and take good backups of the pictures AND data. Sharing with the ability to take proper (sane) backups seem to be features lacking for most Linux photo software I've found...</p>
+<p>My plan for this is to automate running the script using git hooks which will be executed after <code>git pull</code> and <code>git commit</code> but in the meantime I wanted to add a pre-commit hook to run JSHint before commiting changes to my <a href="https://github.com/forbesmyester/SyncIt">SyncIt</a> project. So... how to do this...</p>
+<p>Apparently Git hooks will not allow the commit to proceed when a <a href="http://git-scm.com/book/en/Customizing-Git-Git-Hooks#Client-Side-Hooks">hook exits with a non-zero error code</a> which seems correct with UNIX style philosophies. So now I know what I want to achieve in my script, which will eventually be a hook... This is what I came up with...</p>
+<pre><code>#!/bin/sh
+
+# == JSHint ====================================================================
+JSHINT='node_modules/.bin/jshint'
+ERROR=false
+for jsfile in $(git diff-index --name-only --cached HEAD -- | grep '\.js$'); do
+    if $JSHINT $jsfile 2>&#x26;1 | grep -i 'line'; then
+        ERROR=true
+    fi
+done
+
+if $ERROR ; then
+    exit 1
+fi
+
+# == Everything OK so Exit  ====================================================
+exit 0
+</code></pre>
+<p>This will go through all files which have staged in Git and have a ".js" extension and run JSHint on them. If the message that JSHint returns includes "line" it will set the ERROR flag and will eventually exit with a non-zero error code (1).</p>
+<p>Putting this in .git/hooks/pre-commit and making sure it's executable ( <code>chmod +x .git/hooks/pre-commit</code> ) will make sure it's ran before every commit.</p>
+<p>So I'm Feeling good because I've done something I really should have done ages ago and also some research for my gallery project too :-)</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Jekyll: How to get &#x3C;section> in Jekyll markdown based on &#x3C;h2> tags.</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2018-09-01-jekyll-create-sections.html">
+Jekyll: How to get &#x3C;section> in Jekyll markdown based on &#x3C;h2> tags.
+</a></h3>
+<!-- bashblog_timestamp: #201809010830.01# -->
+<div class="subtitle">September 01, 2018 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I wanted to make a blog post which a future <a href="https://lnug.org/">LNUG</a> talk will be based on to compare achieving the same output in both NodeJS and PostgreSQL.</p>
+<p>While doing this I realised that it would be best to have the code shown side by side like the following:</p>
+<pre><code>+-----------------------------------------------------------+
+|                                                           |
+|         # Joining Two Sets By Field Not In Result         |
+|                                                           |
+| Brief info about problem, input and desired result.       |
+|                                                           |
+|                                                           |
+|   ## Language: SQL            ## Language: NodeJS         |
+|   +-----------------------+   +-----------------------+   |
+|   |                       |   |                       |   |
+|   |  +-----------------+  |   |  +-----------------+  |   |
+|   |  |                 |  |   |  |                 |  |   |
+|   |  |       CODE      |  |   |  |       CODE      |  |   |
+|   |  |                 |  |   |  |                 |  |   |
+|   |  |                 |  |   |  |                 |  |   |
+|   |  +-----------------+  |   |  +-----------------+  |   |
+|   |                       |   |                       |   |
+|   |Info about why good or |   |Info about why good or |   |
+|   |bad language to use for|   |bad language to use for|   |
+|   |this problem.          |   |this problem.          |   |
+|   +-----------------------+   +-----------------------+ | |
+|                                                           |
++-----------------------------------------------------------+
+</code></pre>
+<p>Now I am in the process of moving my blog to <a href="https://jekyllrb.com/">Jekyll</a> but unfortunately when processing <a href="https://daringfireball.net/projects/markdown/">Markdown</a> it adds <code>&#x3C;h1></code>, <code>&#x3C;h2></code>, <code>&#x3C;code></code> and <code>&#x3C;p></code> tags but does not group any set of elements, so pulling the bits related to SQL and NodeJS to the left and right with CSS would seem impossible... There also appeared to be no plugins for this if you want to stay with Markdown syntax.</p>
+<p>So... like any good developer I set about writing one!</p>
+<p>What it does is takes a main element which contains your blog content, a header level (<code>2</code> == <code>&#x3C;h2></code>) as well as a function that takes the content of a header and returns a set of strings which will be used as class names for newly created <code>&#x3C;section></code> elements that encompass all content related to the header.</p>
+<p>An example of how to use is shown below:</p>
+<pre><code class="language-javascript">&#x3C;script>
+(function() {
+
+    {{ "{% include jekyll-create-sections-from-headers.js " }}%}
+
+    process(
+        document.querySelector('div.post-content'),
+        2,
+        function(title) {
+            return [
+                'code-compare',
+                'code-compare-' + title.toLowerCase().replace(/[^a-z0-9]/,'-')
+            ];
+        }
+    );
+
+}())
+&#x3C;/script>
+</code></pre>
+<p>Note the function, in usage is wrapped in an <a href="https://developer.mozilla.org/en-US/docs/Glossary/IIFE">IIFE</a>. If you do not do this you will get unintended global variables.</p>
+<p>Project is <a href="https://github.com/forbesmyester/jekyll-create-sections-from-headers.js">on GitHub</a> with a MIT license.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

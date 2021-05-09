@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>getTLIdEncoderDecoder.js - Locally unique, shorter, sortable timestamp based Id's</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2013-06-17-gettlidencoderdecoder_js-locally-unique-shorter-sortable-timestamp-based-ids.html">
+getTLIdEncoderDecoder.js - Locally unique, shorter, sortable timestamp based Id's
+</a></h3>
+<!-- bashblog_timestamp: #201306170830.01# -->
+<div class="subtitle">June 17, 2013 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I have recently wrote getTLIdEncoderDecoder.js which is a component of SyncIt's upcoming Path based storage.</p>
+<p>Given a supplied epoch it will generate you TLId, which is a word I just invented!</p>
+<p>What is a TLId? It stands for Time Local Id and gives you a reference based on a timestamp that is locally unique.</p>
+<p>Advantages:</p>
+<ol>
+<li>The are shorter than timestamps (though not by a lot).</li>
+<li>You can extract the timestamp that the TLId was generated.</li>
+<li>If you want them ordered by generation time, you do not need to convert them back to timestamps beforehand.</li>
+</ol>
+<p>Here's how you use it:</p>
+<pre><code>// Use one character (32 bit number) to ensure uniqueness within a millisecond
+var uniquenessPerMillisecond = 1;
+// As close as possible (but lower) than the lowest date to give shorter Id's
+var epoch = new Date(1970,0,1).getTime();
+
+// Get the TLId Encoder / Decoder
+var encoderDecoder = getTLIdEncoderDecoder(epoch,uniquenessPerMillisecond);
+
+// Encode a date into a unique string
+var dates = [
+  encoderDecoder.encode(),
+  encoderDecoder.encode(new Date(1980,1,6).getTime()),
+  encoderDecoder.encode(new Date(1981,3,15).getTime()),
+  encoderDecoder.encode(new Date(1986,8,9).getTime()),
+  encoderDecoder.encode(new Date(1983,10,3).getTime()),
+  encoderDecoder.encode(new Date(1982,0,6).getTime())
+];
+
+// Get the dates it was encoded
+var originalTimestamps = dates.map(encoderDecoder.decode);
+
+// Sort them in date order
+var sortedDates = dates.sort(encoderDecoder.sort);
+
+</code></pre>
+<p>Source code is, of course, located <a href="https://github.com/forbesmyester/SyncIt/blob/master/js/getTLIdEncoderDecoder.js">at</a> <a href="https://github.com/forbesmyester/SyncIt/blob/master/js/getTLIdEncoderDecoder.js">GitHub</a></p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

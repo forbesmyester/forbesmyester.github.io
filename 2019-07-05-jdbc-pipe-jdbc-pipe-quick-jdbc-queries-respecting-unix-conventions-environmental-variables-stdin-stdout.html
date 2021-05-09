@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>jdbc-pipe</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2019-07-05-jdbc-pipe-jdbc-pipe-quick-jdbc-queries-respecting-unix-conventions-environmental-variables-stdin-stdout.html">
+jdbc-pipe
+</a></h3>
+<!-- bashblog_timestamp: #201907050830.01# -->
+<div class="subtitle">July 05, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Quick JDBC queries respecting UNIX conventions (environmental variables, STDIN, STDOUT etc)</p>
+<h4>Installation</h4>
+<ol>
+<li>Install the <a href="https://openjdk.java.net/">Java SDK</a>, preferably avoiding Oracle.</li>
+<li>Install <a href="https://leiningen.org/">Leiningen</a>.</li>
+<li>Check this project out and cd into it (<code>git clone git@github.com:forbesmyester/jdbc-pipe.git &#x26;&#x26; cd jdbc-pipe</code>)</li>
+<li>Run <code>lein uberjar</code>.</li>
+<li>Create the destination directories in to ~/.local/bin <code>mkdir -p ~/.local/bin/jdbc-pipe-jars</code></li>
+<li>Copy the JAR's and the bash script <code>cp target/uberjar/jdbc-pipe-*-standalone.jar ~/.local/bin/jdbc-pipe-jars/ &#x26;&#x26; cp ./bin/jdbc-pipe ~/.local/bin</code></li>
+<li>SLF4J which is in libraries this code uses is slightly noisy, might want to dig out slf4j-nop-?.?.??.jar from <a href="https://www.slf4j.org/download.html">https://www.slf4j.org/download.html</a> and drop it <code>~/.local/bin/jdbc-pipe-jars/</code> too.</li>
+<li>You may also want to put your chosen JDBC drivers in the <code>~/.local/bin/jdbc-pipe-jars/</code>.</li>
+</ol>
+<h4>Usage</h4>
+<pre><code class="language-bash">echo 'SELECT * FROM "@user".table_name limit 50' | java -cp "$PWD/target/uberjar/*" jdbc_pipe.core  csv -u username -p password -c "jdbc:url" -d "com.data-vendor.Driver" -s "sub-protocol"
+</code></pre>
+<h4>Options</h4>
+<pre><code>NAME:
+ jdbc-pipe - Quick JDBC queries respecting UNIX conventions (environmental variables, STDIN, ST
+DOUT etc)
+
+USAGE:
+ jdbc-pipe [global-options] command [command options] [arguments...]
+
+VERSION:
+ 0.0.1
+
+COMMANDS:
+   ndjson               Runs a query outputting JSON
+   edn                  Runs a query outputting EDN
+   csv                  Runs a query outputting csv
+   tsv                  Runs a query outputting tsv
+
+GLOBAL OPTIONS:
+       --classname S    JDBC Driver Class [$JDBC_PIPE_CLASSNAME]
+       --subprotocol S  JDBC Sub Protocol / Vendor [$JDBC_PIPE_SUBPROTOCOL]
+       --subname S      JDBC Sub Name / Database Name [$JDBC_PIPE_SUBNAME]
+   -u, --user S         JDBC User [$JDBC_PIPE_USER]
+   -p, --password S     JDBC Password [$JDBC_PIPE_PASSWORD]
+       --name S         JDBC Name [$JDBC_PIPE_NAME]
+       --host S         JDBC Host [$JDBC_PIPE_HOST]
+       --port S         JDBC Port [$JDBC_PIPE_PORT]
+       --vendor S       JDBC Vendor [$JDBC_PIPE_VENDOR]
+       --schema S       JDBC Schema [$JDBC_PIPE_SCHEMA]
+       --read-only S    JDBC Read Only [$JDBC_PIPE_READ_ONLY]
+   -r, --uri S          JDBC URI or Connection String [$JDBC_PIPE_URI]
+   -?, --help
+</code></pre>
+<p>You can find this project at <a href="https://github.com/forbesmyester/jdbc-pipe">GitHub</a>.
+Tags: postgresql, unix, linux</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

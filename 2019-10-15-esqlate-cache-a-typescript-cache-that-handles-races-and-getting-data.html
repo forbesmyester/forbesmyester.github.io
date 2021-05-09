@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Esqlate Cache</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2019-10-15-esqlate-cache-a-typescript-cache-that-handles-races-and-getting-data.html">
+Esqlate Cache
+</a></h3>
+<!-- bashblog_timestamp: #201910150830.01# -->
+<div class="subtitle">October 15, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h5>Why does this exist?</h5>
+<p>Esqlate Cache is a really basic in-memory cache which has a few interesting properties:</p>
+<ul>
+<li>You initialize the cache with the function to retrieve the value from the original source, enabling you to write <code>cache(params)</code> everywhere, whether the item is cached or not. The reason for this is that I found that anything which I wanted to cache was nearly always something that was IO based that I wanted to dependency inject anyway and I would always DI both the cache and the IO operation. Would it not be better to dependency inject one thing?</li>
+<li>It handles race conditions nicely. If a result for a set of parameters is already in the process of being acquired, it will not not start acquiring another, but will return the one result to both requesters.</li>
+<li>It realistically only caches the result from one (promise based) function. I think this is a good thing because it helps TypeScript typing and thus, greatly helps readability.</li>
+</ul>
+<h5>How do you use it?</h5>
+<p>Usage is quite simple:</p>
+<pre><code class="language-js">import getCache, { EsqlateCache } from "esqlate-cache";
+
+// Parameters can be whatever you like, and however many you wish, but they must be JSON serializable.
+function getStatusCodeForUrl(p: string): Promise&#x3C;number> {
+    fetch(url).then((resp) => resp.status);
+}
+
+
+const cache: EsqlateCache&#x3C;number> = getCache(getStatusCodeForUrl);
+
+const uncachedResult = await cache("http://www.google.com");
+const cachedResult = await cache("http://www.google.com");
+const anotherUncachedResult = await cache("http://duckduckgo.com");
+</code></pre>
+<h5>How do I install it?</h5>
+<p>The code is clone-able from here but it you would normally <code>npm install esqlate-cache</code>.</p>
+<h5>What is the license?</h5>
+<p>It's MIT licensed.</p>
+<p>You can find this project at <a href="https://github.com/forbesmyester/esqlate-cache">GitHub</a>.
+Tags: typescript, javascript, caching, io, types, race-condition, library</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

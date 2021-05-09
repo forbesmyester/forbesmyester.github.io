@@ -1,0 +1,6 @@
+[submodule "content-assets/code-in-postgresql/sql-spitting-image"]
+	path = content-assets/code-in-postgresql/sql-spitting-image
+	url = https://github.com/forbesmyester/sql-spitting-image.git
+[submodule "matts-markdown-tools"]
+	path = matts-markdown-tools
+	url = https://github.com/forbesmyester/matts-markdown-tools.git

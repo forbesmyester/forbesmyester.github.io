@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Brackets.io Select TextObject plugin</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2014-03-14-brackets_io-select-textobject-plugin.html">
+Brackets.io Select TextObject plugin
+</a></h3>
+<!-- bashblog_timestamp: #201403140830.01# -->
+<div class="subtitle">March 14, 2014 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I am currently (and have been for a long time) in a state of flux with my current editor selection... For a while about 6 months ago I thought I would end up using VIM and even started reading a book about it. I learnt about VIM Golf, the amazing "." command, Tim Pope's awesome Surround...</p>
+<p>I've learnt a lot about VIM but somewhere along the line it beeped at me one too many times and I felt compelled to go to something a bit more modern. I am currently trying out <a href="http://brackets.io/">Adobe's Brackets.io</a> which has some neet features and even has a form of a Surround plugin which will surround your currently selected text, but the missing out is how to getting that selection.</p>
+<p>What was needed was a way to quickly and easily easily select text... it needed VIM's select-textobject function... So I created it!!! (or at least something similar)</p>
+<p>If you don't know VIM text objects,Here's an example of what it can do Bold itels are selections.</p>
+<p>Suppose I have the following input:</p>
+<p>I have some <span>Text (that I want t **\|** o select)</span> here</p>
+<p>I could use "<code>iw</code>" for inner word:</p>
+<p>I have some <span>Text (that I want **to** select)</span> here</p>
+<p>I could use "<code>i(</code>" for inside a bracketted area:</p>
+<p>I have some **<span>Text (that I want to select)</span>** here</p>
+<p>I could use "<code>it</code>" for inside a tag:</p>
+<p>I have some <span> **Text (that I want to select)** </span> here</p>
+<p>I could use "<code>at</code>" for a tag:</p>
+<p>I have some **<span>Text (that I want to select)</span>** here</p>
+<p>I could use "<code>a&#x3C;p</code>" to select the the "<code>&#x3C;p></code>" tag:</p>
+<p> **I have some <span>Text (that I want to select)</span> here** </p>
+<p>Which is of course identical in this case to "<code>i2t</code>" and "<code>2t</code>":</p>
+<p> **I have some <span>Text (that I want to select)</span> here** </p>
+<p>If you have Brackets.io installed you can go to <em>File > Extension Manager</em> and search for "select text object" and it will come up. You can also get the source, as always <a href="https://github.com/forbesmyester/js.forbesmyester.select-textobject">at GitHub</a>. It goes really well with the "Brackets Surround" and "Brackets Key Remapper" plugins.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

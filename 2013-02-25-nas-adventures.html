@@ -1,0 +1,86 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>NAS Adventures...</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2013-02-25-nas-adventures.html">
+NAS Adventures...
+</a></h3>
+<!-- bashblog_timestamp: #201302250830.01# -->
+<div class="subtitle">February 25, 2013 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h4>The Product</h4>
+<p>I currently am an owner of a Thecus N3200pro NAS. I bought it because it has three disk bays, so can do RAID5 and was similarly priced to a very cheap PC. I was happy with it at first...</p>
+<h4>The Problem</h4>
+<p>Later on I wanted to try out git-annex and noticed that it was not doing NFS locking correctly so I tried to updated to the new firmware. Unfortunately this new firmware added frilly Flash based graphics and completely broke NFS. As I spend most of my time in Linux compared to Windows this is a real problem.</p>
+<h4>Attempt 1 - Customer Support</h4>
+<p>I contacted support which responded in 5 days, telling me that I had to make the shares public (yeh great), which I had already read about, had done and included in my support request! I responded and waited 25 days to be told that my query had been forwarded onto head office. This was in September 2012 and I have not heard anything since so I would not recommend Thecus.</p>
+<h4>Attempt 2 - Install my own Linux on it!</h4>
+<h5>The Installation</h5>
+<p>I came across <a href="http://forum.thecus.com/viewtopic.php?f=14&#x26;t=2954">this link</a> on Thecus's own forums. and decided to give it a go. I did not quite want to do it that way as I wanted to go for an Ubuntu server based system.</p>
+<p>The biggest problem I found was that Ubuntu Server now requires PAE extensions for installation. PAE allows non 64 bit CPU's to access memory above 4GB, the Thecus device definitely does not need this feature and the AMD Geode processor inside the N3200Pro does not have it.</p>
+<p>Google saved me by pointing me to an <a href="http://www.webupd8.org/2012/05/how-to-install-ubuntu-1204-on-non-pae.html">article</a> linking to a mini.iso which could work without PAE. I was set!</p>
+<h5>Bad RAID</h5>
+<p>The Thecus firmware storage device, which looks like a primary hard disk to the BIOS, but is probably flash (there is no physical disk) seem to have two RAID devices /dev/md50 and /dev/md10. I'll leave that to your imagination what the point is of having raid on a single flash drive is...</p>
+<p>Unfortunately one of those seems to be degraded and because of this Ubuntu refuses to boot without keyboard interaction. This is also silly because it's meant to be a server OS and as such might well be running headless in a remote location.</p>
+<p>Anyway to fix this I changed one line in <code>/etc/default/grub</code> from</p>
+<pre><code>GRUB_CMDLINE_LINUX_DEFAULT="splash quiet"
+</code></pre>
+<p>to</p>
+<pre><code>GRUB_CMDLINE_LINUX_DEFAULT="splash quiet bootdegraded=true"
+</code></pre>
+<p>I still cared somewhat about keeping the original firmware working, but not enough to worry about the raid being degraded.</p>
+<p>The Ubuntu bug is <a href="https://bugs.launchpad.net/ubuntu/+source/mdadm/+bug/872220">here</a></p>
+<h5>Will not boot after error</h5>
+<p>For some reason the Ubuntu people seem to feel that if a system errors, the best course of action is to make a user select which kernel to use, as that could be the source of the problem... Again the server requires manual intervention to make it boot...</p>
+<p>The Ubuntu bug is <a href="https://bugs.launchpad.net/ubuntu/+source/grub2/+bug/669481">here</a></p>
+<p>Thankfully the <a href="https://bugs.launchpad.net/ubuntu/+source/grub2/+bug/669481/comments/13">fix</a> was easy to find in the bug report itself.</p>
+<h5>Booting off Thecus Flash instead of my USB</h5>
+<p>After having done all this and configured NFS / ACL / Git / Mercurial I was ready to move the server into it's final home so I unplugged it, moved it and plugged it into it's new location. On next boot, it booted the Thecus firmware!</p>
+<p>I took it back to where I could get a keyboard/monitor to it and found that it had lost the boot sequence I had put into the BIOS. It does not seem capable of keeping the boot status across power disconnections.</p>
+<p>Now being completely ticked off with this box I decided to use the 128Mb flash disk Thecus put in it and use it as my /boot partition.</p>
+<p>First I booted an XUbuntu Live CD, mounted my RAID disk and backed up the Thecus firmware (the drive is only 128MB).</p>
+<pre><code>mkdir /tmp/raid
+mount /dev/md0 /tmp/raid
+dd if=/dev/sdb /tmp/raid/thecus_firmware.bin
+</code></pre>
+<p>Later on I bzip2'd this and put it somewhere safe.</p>
+<p>Referencing <a href="https://help.ubuntu.com/community/CreateBootPartitionAfterInstall">this help.ubuntu.com article</a> and other articles I followed these steps:</p>
+<ol>
+<li>Used <code>cfdisk</code> to repartition the flash into one partition.</li>
+<li>Mounted the USB drive that I was using as my root partition along with the newly created flash partition using <code>mkdir /tmp/my_root /tmp/boot; mount /dev/sdf /tmp/my_root; mount /dev/sdb /tmp/boot/</code>.</li>
+<li>Copied the data from my old /boot to the flash with <code>cp /tmp/my_root/boot /tmp/boot</code>.</li>
+<li>Used <code>umount /tmp/boot; mount /dev/sdb /tmp/my_root/boot</code> to remount the flash into it's proper location.</li>
+<li>Used <code>blkid</code> to identify the UUID's of the partitions for the new /boot partition and added it to the <code>/etc/fstab</code> file.</li>
+<li>Ran <code>grub-install --root-directory=/mnt/my_root /dev/sdb</code> to put grub onto the internal flash drive also... Take that Thecus!</li>
+</ol>
+<p>After all this I did consider the whole thing to be done, but I woke up the day after thinking that if the kernel gets upgraded, the grub configuration file might be rewrote to point to my USB thumb drive I am booted from, not the Thecus flash drive. Remembering that it asks you about where to install Grub on Ubuntu installation I figured that reconfiguring the package would probably update any configuration file references.</p>
+<pre><code># dpkg-reconfigure grub-pc
+</code></pre>
+<p>Followed it through, ticked the Thecus flash drive and I'm done.</p>
+<p>The only other thing I need to watch out for is that now my <code>/boot</code> partition is pretty small, so when the kernel is being updated I want to make sure that there are not too many old copies lying around, because they all take space and I think running out of space on <code>/boot</code> might be bad. I have successfully followed <a href="http://tombuntu.com/index.php/2007/10/17/remove-ubuntu-kernels-you-dont-need/">these</a> instructions on how to remove old kernels.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Code In PostgreSQL: You can use WITH to name specific parts of SQL</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2019-03-12-code-in-postgresql-with.html">
+Code In PostgreSQL: You can use WITH to name specific parts of SQL
+</a></h3>
+<!-- bashblog_timestamp: #201903120830.01# -->
+<div class="subtitle">March 12, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h4>This series of articles</h4>
+<p>This is the second of the Code in PostgreSQL series of articles.</p>
+<h5>Articles in this series</h5>
+<ul>
+<li><a href="2019-03-03-code-in-postgresql-in-order-by-limit.html">You can do lots with just IN, ORDER BY and LIMIT</a></li>
+<li><a href="2019-03-12-code-in-postgresql-with.html">You can use WITH to name specific parts of SQL</a></li>
+<li><a href="2019-05-15-code-in-postgresql-inner-join.html">Combining data from multiple tables with INNER JOIN</a></li>
+<li>A NoSQL developer might not know about: GROUP BY ( Soon to be published )</li>
+<li>Sub select ( Soon to be published )</li>
+<li>Variables ( Soon to be published )</li>
+<li>Prepare JSON ( Soon to be published )</li>
+<li>Create Function (and testing it) ( Soon to be published )</li>
+<li>Custom Aggregates ( Soon to be published )</li>
+</ul>
+<h5>The reason why SQL is so important</h5>
+<p>When developing systems we often have a choice of writing code (NodeJS, C#, Python or PHP etc) or SQL. I believe that sometimes the decision to write code is taken without fully evaluating how much of the task could be offloaded to SQL.</p>
+<p>In this series of articles I wish to show the huge benefits of using and learning SQL by examining progressively more difficult scenarios with increasing amounts of SQL knowledge. In doing this I hope to illustrate that sometimes large amounts of extra code is written for what SQL can achieve quicker, with less complexity and more readability.</p>
+<p>To be more specific, we should try to follow the <a href="https://en.wikipedia.org/wiki/Rule_of_least_power">rule of least power</a> more often.</p>
+<h5>About the Ergast data set</h5>
+<p>For this series of articles we will be using the <a href="https://ergast.com/mrd">Ergast</a> data set, which is a provided under the <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">Attribution-NonCommercial-ShareAlike 3.0 Unported Licence</a>.</p>
+<h5>Setting up the Ergast database within PostgreSQL</h5>
+<p>To set up the <a href="https://ergast.com/mrd">Ergast</a> database within PostgreSQL I did the following:</p>
+<p>I allowed <code>psql</code> and friends to work without me having to put in a password all the time by configuring the <a href="https://www.postgresql.org/docs/current/libpq-envars.html">PostgreSQL environmental variables</a>.</p>
+<pre><code class="language-bash">export PGUSER=postgres PGPASSWORD=postgres PGDATABASE=postgres PGHOST=127.0.0.1
+</code></pre>
+<p>Then import the <a href="http://ergast.com/">Ergast</a> database. NOTE: At the time of writing I was unable to install the PostgreSQL version.</p>
+<pre><code class="language-bash">wget -O /tmp/f1db_ansi.sql.gz http://ergast.com/downloads/f1db_ansi.sql.gz
+cat /tmp/f1db_ansi.sql.gz | \
+    gzip -d | \
+    sed 's/int(..)/int/' | \
+    sed 's/ \+AUTO_INCREMENT//' | \
+    sed "s/\\\'/\'\'/g" | \
+    sed 's/UNIQUE KEY \"\(\w\+\)\"/UNIQUE /' | \
+    sed 's/^ *KEY .*(\"\(.*\)\")/CHECK ("\1" > 0)/' | \
+    sed 's/ date NOT NULL DEFAULT .0000.*,/ date,/'| psql
+</code></pre>
+<h5>Assumed level of SQL Knowledge</h5>
+<p>In this JavaScript example we will assume the writer has sufficient SQL knowledge to use a <code>WHERE</code> statement along with the ability to only return certain fields using <code>SELECT</code>. After this we will see how this can be accomplished in one single SQL statement using <code>IN</code>, <code>ORDER BY</code> and <code>LIMIT</code>.</p>
+<h4>Where we are</h4>
+<p>We saw <a href="2019-03-03-code-in-postgresql-in-order-by-limit.md">in the previous article</a> how we could select rows from one table using a condition on another table. In doing this we noticed that the SQL we created did not give a name to the section of code within the <code>IN (...)</code> clause, which we did in the JavaScript code.</p>
+<p>For the next few articles our SQL will be simple enough that we will not feel a great need to name sections of code. At some point however, as the complexity ramps up, we're going to want to start naming sections of our SQL to enhance readability.</p>
+<h5>The original SQL</h5>
+<pre><code class="language-sql">SELECT
+    "driverStandings".points,
+    "driverStandings"."driverId",
+    2017 as year
+FROM "driverStandings"
+WHERE "raceId" IN (
+    SELECT "raceId" FROM races
+    WHERE year = 2017
+    ORDER BY "round" DESC
+    LIMIT 1
+)
+ORDER BY
+    "driverStandings".points DESC,
+    "driverStandings"."driverId" ASC
+</code></pre>
+<h5>The aim</h5>
+<p>We would like to give a name to the section of code within the <code>IN (...)</code> clause.</p>
+<h4>Common Table Expressions</h4>
+<p>Functions in code are magical, yes they have a name, take parameters and give you back a result, but the amazing thing is that they have a name. Because they have names you are not forced to think about their internal workings. You can think about a named function as a distinct thing in and of itself, which frees your mind to think about the larger picture and higher level concepts.</p>
+<p>Giving names to things is not an alien concept to SQL. As you can see in "The original SQL" we actually gave the third column whose value is <code>2017</code> the name "year". You can also name, or alias other things within your SQL but this falls far short of how we think (or not) about functions.</p>
+<p>Common Table Expressions are the closest I have found to being able to name and refer to sections of SQL.</p>
+<h5>The SQL</h5>
+<pre><code class="language-sql">WITH "racesIn2017" as (
+    SELECT "raceId" FROM races WHERE year = 2017
+    ORDER BY "round" DESC
+    LIMIT 1
+)
+SELECT
+    "driverStandings".points,
+    "driverStandings"."driverId",
+    2017 as year
+FROM "driverStandings"
+WHERE "raceId" IN ( SELECT "raceId" FROM "racesIn2017" )
+ORDER BY "driverStandings".points DESC
+</code></pre>
+<p>IN the above code we have taken the contents of the <code>IN (...)</code> statement and moved it into a common table expression called <code>racesIn2017</code> at the top. We then have to select from that common table expression within the <code>IN (...)</code> clause again so in characters typed we have something longer, but we have achieved something else...</p>
+<p>There is no <code>WHERE</code> within the <code>IN (...)</code> clause any more, that complexity has been moved to the common table expression. WHERE is not difficult to understand but obviously the complexity we could have abstracted away and named in the common table expressions could have been far far greater.</p>
+<div class="pro-list">
+<h5>Pro's</h5>
+<ul>
+<li>The ability to name and refer to a section of code is incredibly important because the developer can think about it as one thing, as opposed to the details that make it up.</li>
+</ul>
+</div>
+<div class="con-list">
+<h5>Con's</h5>
+<ul>
+<li>Common table expressions, from what I have seen, are optimized individually, <a href="https://medium.com/@hakibenita/be-careful-with-cte-in-postgresql-fca5e24d2119">not in the context of the main query</a>. This looks to have <a href="https://www.postgresql.org/about/news/1943/">changed in PostgreSQL 12</a>.</li>
+</ul>
+</div>
+<h4>Results</h4>
+<p>The results are identical to the <a href="2019-03-03-code-in-postgresql-in-order-by-limit.md">previous version</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">points</th><th align="left">driverId</th><th align="left">year</th></tr></thead><tbody><tr><td align="left">363</td><td align="left">1</td><td align="left">2017</td></tr><tr><td align="left">317</td><td align="left">20</td><td align="left">2017</td></tr><tr><td align="left">305</td><td align="left">822</td><td align="left">2017</td></tr><tr><td align="left">205</td><td align="left">8</td><td align="left">2017</td></tr><tr><td align="left">200</td><td align="left">817</td><td align="left">2017</td></tr><tr><td align="left">168</td><td align="left">830</td><td align="left">2017</td></tr><tr><td align="left">100</td><td align="left">815</td><td align="left">2017</td></tr><tr><td align="left">87</td><td align="left">839</td><td align="left">2017</td></tr><tr><td align="left">54</td><td align="left">832</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">13</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">807</td><td align="left">2017</td></tr><tr><td align="left">40</td><td align="left">840</td><td align="left">2017</td></tr><tr><td align="left">28</td><td align="left">154</td><td align="left">2017</td></tr><tr><td align="left">19</td><td align="left">825</td><td align="left">2017</td></tr><tr><td align="left">17</td><td align="left">4</td><td align="left">2017</td></tr><tr><td align="left">13</td><td align="left">838</td><td align="left">2017</td></tr><tr><td align="left">8</td><td align="left">835</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">826</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">836</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">18</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">814</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">828</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">841</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">842</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">843</td><td align="left">2017</td></tr></tbody></table>
+<link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/tomorrow-night.min.css">
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll('pre code[data-lang]').forEach(
+    (block) => {hljs.highlightBlock(block);}
+  );
+  ["bash", "javascript", "json", "sql"]
+    .forEach(function(lang) {
+      document.querySelectorAll('pre code.language-' + lang).forEach(
+        (block) => {hljs.highlightBlock(block);}
+      );
+    });
+});
+</script>
+<style>
+</style>
+<script>
+</script>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

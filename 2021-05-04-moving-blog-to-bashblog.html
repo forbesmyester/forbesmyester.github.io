@@ -1,0 +1,193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Moving Blog to BashBlog</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2021-05-04-moving-blog-to-bashblog.html">
+Moving Blog to BashBlog
+</a></h3>
+<!-- bashblog_timestamp: #202105040830.01# -->
+<div class="subtitle">May 04, 2021 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I have Blog files stored in Markdown which I pre-process using <a href="https://github.com/remarkjs/remark">remark</a> and some <a href="https://github.com/forbesmyester/remark-unixpipe">custom</a> <a href="https://github.com/forbesmyester/remark-copy-code-meta-hash-up">plugins</a>.</p>
+<p>They all originally were from Jekyll and then Pelican but I've become disatisfied with them so I wanted to move to <a href="https://github.com/cfenollosa/bashblog">BashBlog</a> because I want something simple where the files are just pure markdown.</p>
+<p>There are two jobs in this tasks</p>
+<h4>Job 1: Change Front Matter into a H1 and <code>Tags: </code></h4>
+<h5>The one off...</h5>
+<p>Jekyll has content stored as Markdown with Front Matter above which looks like the following:</p>
+<pre><code>---
+title:        Code In PostgreSQL: Combining data from multiple tables with INNER JOIN
+date:         2019-03-04 21:00:20
+tags:         code-in-postgresql, javascript, postgresql
+category      postgresql
+---
+
+Welcome to my post, the H1 will automatically be written by the title in my front matter.
+
+## This is a H2
+</code></pre>
+<p>I need to convert this into</p>
+<pre><code># This is my real title
+
+And I have content
+
+## And other headers
+
+Tags: but, i-have, other-tags-too
+</code></pre>
+<p>This conversion is relatively for a one off via an AWK script</p>
+<pre><code class="language-javascript">BEGIN {
+    TAGS=""
+    CATEGORY=""
+    PRINT=0
+    TITLE=""
+}
+match($0, /^tags: +(.*)/, match_arr) {
+    TAGS=match_arr[1]
+    $0=""
+}
+match($0, /^category: +(.*)/, match_arr) {
+    CATEGORY=match_arr[1]
+    $0=""
+}
+match($0, /^title: +(.*)/, match_arr) {
+    TITLE=match_arr[1]
+}
+PRINT==1 { print $0 }
+TITLE &#x26;&#x26; match($0, /^---/) {
+    print "#", TITLE
+    print ""
+    PRINT=1
+}
+END {
+    if (TAGS &#x26;&#x26; CATEGORY) {
+        printf "Tags: %s, %s", TAGS, CATEGORY
+        exit 0
+    }
+    if (TAGS) {
+        printf "Tags: %s", TAGS
+        exit 0
+    }
+    if (CATEGORY) {
+        printf "Tags: %s", CATEGORY
+        exit 0
+    }
+}
+</code></pre>
+<p>The basic idea is that</p>
+<ol>
+<li>It pulls out the <code>tags:</code>, <code>category:</code> and <code>title:</code></li>
+<li>If the title is defined and you hit a line that begins with <code>---</code></li>
+<li>Print out the H1 tag (title)</li>
+<li>If the title has been printed out, print out the current line</li>
+<li>Finally print out the <code>category:</code> and <code>tags:</code> as tags.</li>
+</ol>
+<p>You can run this with <code>cat your_jekyll.md | awk -f convert_post.awk</code> and it will print the BashBlog output to STDOUT.</p>
+<h5>Every file</h5>
+<p>To do this for every file is relatively simple with GNU Parallel</p>
+<pre><code class="language-bash">find 2*.md | parallel mv {} {}.x
+find 2*.md.x | parallel cat {} '|' awk -f convert_post.awk '>' {.}
+rm *.x
+</code></pre>
+<h4>Job 2: File names with multiple periods (.)</h4>
+<p>function multi_dot() {
+FILENAME="$1"
+FILENAME_NO_EXT="$(echo "$FILENAME" | sed 's/.md$//')"
+NEW_FILENAME="$(echo "$FILENAME_NO_EXT" | sed 's/./_/g').md"
+mv "$FILENAME" "$NEW_FILENAME"
+}
+export -f multi_dot</p>
+<p>find <em>.</em>.md | parallel multi_dot</p>
+<h4>Job 3: Correct Dates</h4>
+<p>Given I have files like <a href="2019-07-24-ndjson-env.md">2019-07-24-ndjson-env.md</a> which encode the date it shouldn't be too hard, but BashBlog wants to store the date within a comment of the HTML file that looks like <code>&#x3C;!-- bashblog_timestamp: #202105031115.27# --></code>.</p>
+<p>If I want to import my data I can copy the markdown file into the working directory and run <code>bb.sh edit MARKDOWN_FILE.md</code> which will open up my <code>$EDITOR</code> and, upon save, generate a HTML file with the timestamp of <code>$(date)</code>.</p>
+<p>To do a mass import I will need to do some thinking:</p>
+<h4>Generating the HTML for blog post</h4>
+<p>if I run <code>bb.sh edit 2019-07-24-ndjson-env.md</code> and there is no <code>2019-07-24-ndjson-env.html</code> BashBlog will exit with the status code 255 and the following output:</p>
+<pre><code>$ ./bb.sh edit 2019-07-24-ndjson-env.md
+Can't edit post 2019-07-24-ndjson-env.html, did you mean to use "bb.sh.sh post &#x3C;draft_file>"?
+</code></pre>
+<p>This is easily solved by a <code>touch 2019-07-24-ndjson-env</code> and then re-running:</p>
+<pre><code>$ touch  2019-07-24-ndjson-env.html
+$ bb.sh edit 2019-07-24-ndjson-env.md
+MARKDOWN: /home/fozz/Projects/plain-text-blog/markdown
+Posted 2019-07-24-ndjson-env.html
+Rebuilding tag pages .
+Rebuilding the index ........
+Creating an index page with all the posts ........
+Creating an index page with all the tags ...
+Making RSS ........
+</code></pre>
+<p>Which is a good process, but I don't want to re-open my <code>$EDITOR</code> for every post...</p>
+<h4>The fake <code>$EDITOR</code></h4>
+<p>If BashBlog always uses <code>$EDITOR</code> to allow you to edit before a post, why not set <code>$EDITOR</code> to something which will take the parameter of a file, will return a exit code of 0, but not be interactive... something like <code>echo</code>.</p>
+<p>So now our <code>bb.sh edit ...</code> command now looks like <code>env EDITOR=echo bb.sh edit 2019-07-24-ndjson.env.md</code></p>
+<h4>The Date</h4>
+<p>Having done all this BashBlog will still think the date of the post is now, because it has no logic to read the date from the filename, only from the <code>bashblog_timestamp</code> comment within the HTML file (falling back to <code>$(date)</code>);</p>
+<p>The following command will use <code>sed</code> to replace the date:</p>
+<pre><code>sed 's/\(&#x3C;!-- bashblog_timestamp: #\).*\(# -->\)/\1YOUDATE\2/' -i 2019-07-24-ndjson-env.html
+</code></pre>
+<h4>One Blog Post</h4>
+<p>To restore just one Blog post we would need to run the following commands:</p>
+<pre><code>DATE="$(echo "2019-07-24-ndjson-env.md" | cut -d '-' -f 1,2,3 | sed 's/\-//g')0830.01"
+touch "2019-07-24-ndjson-env.html"
+env EDITOR=echo bb.sh edit "2019-07-24-ndjson-env.md"
+sed 's/\(&#x3C;!-- bashblog_timestamp: #\).*\(# -->\)/\1'"$DATE"'\2/' -i "2019-07-24-ndjson-env.html"
+</code></pre>
+<p>But after this the post will display the current date within the file and if you <code>bb.sh edit 2019-07-24-ndjson-env.md</code> it will reset the date still, because for <code>bb.sh edit</code> the date of the file still takes precedence.</p>
+<p>The clue to fixing this is in the changelog, it says:</p>
+<blockquote>
+<p>2.7 Store post date on a comment in the html file (#96).
+On rebuild, the post date will be synchronised between comment date and file date, with precedence for comment date.</p>
+</blockquote>
+<p>So all we need to do is run <code>bb.sh rebuild</code> and it changes the date of the file to the <code>bashblog_timestamp</code> and upates the text of the HTML to the correct date.</p>
+<h4>Many posts</h4>
+<p>This is all great. But I need to update a lot of blog posts so I'll turn to my old friend GNU parallel:</p>
+<p>First putting the above into script called <code>publish-dated-md</code>:</p>
+<pre><code class="language-bash">#!/bin/bash
+
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "= BEGIN ================="
+FILENAME="$1"
+echo "PROCESSING FILE: $FILENAME"
+FILENAME_HTML="$(echo "$FILENAME" | sed 's/md$/html/')"
+DATE="$(echo "$FILENAME" | cut -d '-' -f 1,2,3 | sed 's/\-//g')0830.01"
+touch "$FILENAME_HTML"
+echo "== BB START =="
+env EDITOR=echo bb.sh edit "$FILENAME"
+echo "== BB END ===="
+sed 's/\(&#x3C;!-- bashblog_timestamp: #\).*\(# -->\)/\1'"$DATE"'\2/' -i "$FILENAME_HTML"
+echo "= END ==================="
+</code></pre>
+<p>And then running it on all the files:</p>
+<pre><code class="language-bash">find *.md | grep '^[0-9]\{4\}' | parallel -j1 --halt now,fail=1 publish-dated-md {}
+bb.sh rebuild
+</code></pre>
+<p>Which pretty much does the same as in the "One Blog Post" header, but using <a href="https://www.gnu.org/software/parallel/">GNU Parallel</a> to process all the files and then runs a <code>bb.sh rebuild</code> at the end to clean it all up.</p>
+<p>Tags: <a href='tag_blogging.html'>blogging</a>, <a href='tag_bashblog.html'>bashblog</a>, <a href='tag_bash.html'>bash</a>, <a href='tag_gnu-parallel.html'>gnu-parallel</a></p>
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

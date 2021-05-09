@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Move Panes and Windows in Tmux</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2015-07-15-move-panes-and-windows-in-tmux.html">
+Move Panes and Windows in Tmux
+</a></h3>
+<!-- bashblog_timestamp: #201507150830.01# -->
+<div class="subtitle">July 15, 2015 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I have a pretty well customized <a href="https://tmux.github.io">tmux</a> configuration, as do lots of people but there is one thing that I've found difficult to do and isn't in most peoples configuration (that I've seen). This is the ability to move panes between different windows or re-order the windows.</p>
+<p>Configuring tmux for moving whole windows around is quite easy as it's a single command in tmux, therefore the standard <code>command-prompt</code> method can achieve it.</p>
+<pre><code># Moves a whole window to a different number
+bind-key M command-prompt -p "reposition window number:" "move-window -t %%"
+</code></pre>
+<p>However using the same method to take a pane from window and deposit it in another doesn't work consistently.</p>
+<pre><code># Moves a whole window to a different number
+bind-key m command-prompt -p "move pane to window:" "join-pane -t '%%'"
+</code></pre>
+<p>It will work if there is only one pane within the window, but it fails if there are many saying "Can't join pane to it's own window", which makes no sense to me at all, at least as an error message... My first attempt to fix this involved changing the line to read:</p>
+<pre><code># Doesn't work
+bind-key m command-prompt -p "move pane to window:" "break-pane ; join-pane -t '%%'"
+</code></pre>
+<p>Which seems reasonable but this doesn't work either, I think because it needs to be <strong>a command</strong> template, not multiple commands... I tried a few combinations with no success.</p>
+<p>In the end I realised that the VIM/tmux bindings for <code>C-[hjkl]</code> were using the tmux run command within the tmux configuration file itself. This is a bit strange as it is actually running a shell command to take a tmux action, within tmux itself... weird but seems to works fine.</p>
+<p>So taking this approach I can break the pane, then run the prompt to join it into another window. Not the perfect solution but practical and easy.</p>
+<pre><code># Moves an individual pane to another window.
+bind-key m run "tmux break-pane ; tmux command-prompt -p \"move pane to window:\" \"join-pane -t '%%'\""
+</code></pre>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

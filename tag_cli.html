@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Matt at Keyboard Writes Code &mdash; Posts tagged "cli"</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<h3><a class="ablack" href="2019-06-14-hacky-tools-for-postgresql.html">
+Hacky tools for PostgreSQL
+</a></h3>
+<!-- bashblog_timestamp: #201906140830.01# -->
+<div class="subtitle">June 14, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Hacky tools for PostgreSQL that makes interacting / extracting / analysis of data in PostgreSQL easier.</p>
+<p><img src="/content-assets/screenshot.png" alt="screenshot"></p>
+<p>NOTE: Examples are from a PostgreSQL version of <a href="https://ergast.com/mrd/">ergast</a>.</p>
+<h4>psql-out</h4>
+<p>Sometimes I find I have requests like the following:</p>
+<blockquote>
+<p>Run this query and give me the results [in an Excel file so I can look at them in Excel].</p>
+</blockquote>
+<p>Also sometimes I want to:</p>
+<blockquote>
+<p>Run a complicated query and get the results as <a href="http://ndjson.org/">ndjson</a> so I can process them in JavaScript.</p>
+</blockquote>
+<p>But sometimes I'm:</p>
+<blockquote>
+<p>Looking at data trying to figure out if a hypothesis makes sense and want to throw things into graphs very, very quickly.</p>
+</blockquote>
+<p>It's not cool, it's not pretty, but this is what <code>psql-out</code> is for!</p>
+<p>If you've got your environmental variables set up (see <code>pgpass-env</code> lower down) you can do something like the following:</p>
+<pre><code class="language-shell">echo 'select name, position from competitors' | psql-out
+</code></pre>
+<p>And get a well formed CSV file out into STDOUT.</p>
+<p>To write it to a file you just need to add <code>> your_file.csv</code> to the end to pipe STDOUT to the desired file:</p>
+<pre><code class="language-shell">echo 'select name, position from competitors' | psql-out > your_file.csv
+</code></pre>
+<p>If you want it as an ndjson file you can run</p>
+<pre><code class="language-shell">echo 'select name, position from competitors' | psql-out -f ndjson
+</code></pre>
+<p>To get an ndjson file out. You can also get a TSV (Tab seperated CSV) out by passing <code>-t tsv</code>.</p>
+<h4>termgraph-runner</h4>
+<p>When you've got your nice CSV using the tools from above and you want to see if the data looks correct quickly one of the best ways I know to do this is to draw a quick graph. You could fire up Excel or <a href="https://www.libreoffice.org/">LibreOffice</a> and pointy-clicky to get your graph. This is a <strong>really</strong> bad solution if you're still finding out whether your data is correct because that feedback loop of command-line -> csv -> spreadsheet > graph is pretty long. What if you could quickly draw graphs right in your terminal... You can using termgraph-runner (which is backed by the awesome <a href="https://github.com/mkaz/termgraph">termgraph</a>.</p>
+<pre><code class="language-shell">
+echo '
+    select
+        code,
+        sum(CASE WHEN position = 1 THEN 1 ELSE 0 END) as win,
+        sum(CASE WHEN position &#x3C;= 3 THEN 1 ELSE 0 END) as podium
+    from results
+    natural join drivers
+    group by code
+    order by 2 desc limit 5' | psql-out -f csv | termgraph-runner --stacked
+
+</code></pre>
+<h4>pgpass-env</h4>
+<p>I found that I have files that look like the following in the root of most of my source code repositories (and in my <code>.gitignore</code> of course):</p>
+<pre><code class="language-shell">export PGHOST="127.0.0.1"
+export PGDATABASE="my_product"
+export PGUSER="my_product"
+export PGPASSWORD="a_good_password"
+export PGPORT="5432"
+export LISTEN_PORT="4040"
+</code></pre>
+<p>However for my database administration GUI I also have a <code>~/.pgpass</code> file in my home directory with the following:</p>
+<pre><code>127.0.0.1:5432:my_product:my_product:a_good_password
+</code></pre>
+<p>This is a duplication of data and is kinda ridiculous.</p>
+<p>Enter <code>pgpass-env</code> which is a simple bash script that converts the former into the latter</p>
+<p>The idea is to store a name above the lines in the ~/.pgpass like the following</p>
+<pre><code># local_my_product
+127.0.0.1:5432:my_product:my_product:a_good_password
+# local_another_product
+127.0.0.1:5432:another_product:another_product:a_good_password
+</code></pre>
+<p>Running just <code>pgpass-env</code> it gives you a list of possible options:</p>
+<pre><code class="language-shell">$ pgpass-env
+Pass one of the following
+    * local_my_product
+    * local_another_product
+</code></pre>
+<p>But if you would pass the name of a connection it would output:</p>
+<pre><code class="language-shell">$ . pgpass-env local_my_product
+> postgres://my_product@127.0.0.1:5432/my_product
+</code></pre>
+<p>While at the same time performing the required <code>EXPORT PGUSER=my_product</code> etc. Using the preceding <code>.</code> means those environmental variables will be brought into the current environment, which is probably what you want.</p>
+<p>It also adds adds <code>$DATABASE_URL</code> which I use in <a href="https://github.com/tpope/vim-dadbod">vim-dadbod</a> but I also understand is used by Heroku.</p>
+<p>NOTE: Look at the BASH source code, <code>pgpass-env</code> is quick, simple code to get the job done, <strong>not</strong> perfect code. You can see that the .pgpass fields are separated by <code>:</code> but I have put no thought in how to escape a <code>:</code> should one be included in a password. If your password includes a <code>:</code> it'll probably break.</p>
+<h4>Installation</h4>
+<p>Installation is simple with some BASH tomfoolery:</p>
+<pre><code class="language-shell">mkdir -p ~/.local/bin &#x26;&#x26; find . -maxdepth 1 -type f -executable | parallel ln -s "$PWD/{/}" ~/.local/bin
+</code></pre>
+<h4>Other interesting tools I've found to do portions of this...</h4>
+<p>I've not found anything that I can use to draw pie charts simply in the terminal - ideas welcome.</p>
+<h5>Software</h5>
+<ul>
+<li><a href="https://github.com/mcastorina/graph-cli">graph-cli</a> Can accept input from STDIN and will pop up your graph in a window.</li>
+<li><a href="https://veusz.github.io/">Veusz</a> Is a desktop app which looks like a mix of Tableau and a DTP application. It's file format is plain text and it even has a Python API. It should be possible to wrap this and spit out a great image file.</li>
+<li><a href="https://github.com/dkogan/feedgnuplot">feedgnuplot</a> looks like the thing I'd use if I wanted to draw a line graph. Because it's based on gnuplot it can draw your line graph right in the terminal or can popup a window.</li>
+</ul>
+<h5>Libraries</h5>
+<ul>
+<li><a href="https://github.com/tidyverse/ggplot2">ggplot</a> is an R library for drawing graphs, could probably whip something up again to output an image file.</li>
+<li><a href="https://vega.github.io/">vega</a> and vega-lite are by far the best JavaScript graphing libraries I've ever come across. You can specify a graph using just json and they have a <a href="https://vega.github.io/vega/usage/#cli">CLI interface</a> that can spit out png's etc.</li>
+</ul>
+<p>You can find this project at <a href="https://github.com/forbesmyester/psql-tools">GitHub</a>.</p>
+<p>Tags: <a href='tag_linux.html'>linux</a>, <a href='tag_unix.html'>unix</a>, <a href='tag_cli.html'>cli</a>, <a href='tag_command-line.html'>command-line</a>, <a href='tag_postgresql.html'>postgresql</a></p>
+
+
+
+<!-- text end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

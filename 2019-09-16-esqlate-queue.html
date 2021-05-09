@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>EsqlateQueue - Push to a AsyncIterableIterator</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2019-09-16-esqlate-queue.html">
+EsqlateQueue - Push to a AsyncIterableIterator
+</a></h3>
+<!-- bashblog_timestamp: #201909160830.01# -->
+<div class="subtitle">September 16, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h5>Why</h5>
+<p>Sometimes you want to process something, but you're not interested in the result immediately because the task is not a priority to you, or maybe even the user.</p>
+<p>For this you may well use a Queue of some variety, something like <a href="https://www.rabbitmq.com/">RabbitMQ</a>, <a href="https://aws.amazon.com/sqs/">Amazon AWS's SQS</a> or maybe even <a href="https://zeromq.org/">ZeroMQ</a>.</p>
+<p>These are all fantastic technologies but:</p>
+<ul>
+<li>The first two require infrastructure (so perhaps not great for an OSS project you want people to use).</li>
+<li>The latter, you just get a message out, which is untyped and is perhaps overly complicated / higher barrier to entry for some use cases.</li>
+</ul>
+<p>However if your task is mainly just running a few <a href="https://www.postgresql.org/">PostgreSQL</a> queries:</p>
+<ul>
+<li>Your CPU requirements for the process are probably small (you're doing mostly IO) and PostgreSQL is taking the load.</li>
+<li>You can't simply scale to many nodes without complications such as <a href="https://pgbouncer.github.io/">pgBouncer</a> or similar because of how PostgreSQL handles connections (memory).</li>
+<li>You want to keep it super simple as you know the demand for the service will be small.</li>
+</ul>
+<p>If these are your requirements and you're using TypeScript, you may want a typed solution for a really simple Queue this may be the answer.</p>
+<h5>What it does</h5>
+<p>This allows you to use one simple worker function (<code>EsqlateQueueWorker&#x3C;Q, R> = (item: Q) => Promise&#x3C;R></code>) which has a parameter of a queue item, and transforms it into the item you want as the finished product and the end of the queue.</p>
+<p>Passing this <code>EsqlateQueueWorker</code> to the <code>getEsqlateQueue()</code> function will return an object with two methods, these are:</p>
+<ul>
+<li><code>push()</code> which you use to add things for processing.</li>
+<li><code>results()</code>, which will when called, return an <code>AsyncIterableIterator</code> which you can use a <code>for-of</code> to get the results.</li>
+</ul>
+<p>Currently it does not support any form of parallelism, but is well typed and has zero dependencies.</p>
+<h5>Example</h5>
+<pre><code class="language-typescript">import { EsqlateQueueWorker } from '../src/index';
+import getEsqlateQueue from '../src/index';
+
+
+// Create a worker. This will be used to process the items in the Queue.
+const queueWorker: EsqlateQueueWorker&#x3C;number,string> = (n) => {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve("Number: A" + n);
+        }, 5);
+    });
+};
+
+// Create an instance of the Queue
+const esqlateQueue = getEsqlateQueue(queueWorker);
+
+// Push items onto the Queue... afterwards, otherwise we'd never get to the loop
+setTimeout(
+    async () => {
+        results.push("ADD");
+        esqlateQueue.push(1);
+        esqlateQueue.push(2);
+    },
+    500
+);
+
+let n = 1;
+
+// Process the Queue Results (which also start the queue processing)
+for await (const s of esqlateQueue.results()) {
+    assert(s == "Number: A" + (n++));
+}
+
+</code></pre>
+<h5>Installation</h5>
+<p>To install, use NPM:</p>
+<pre><code>npm install esqlate-queue
+</code></pre>
+<h5>License</h5>
+<p>The code is licensed under MIT.</p>
+<p>You can find this project at <a href="https://github.com/forbesmyester/esqlate-queue">GitHub</a>.
+Tags: typescript, queue</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

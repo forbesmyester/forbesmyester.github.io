@@ -1,0 +1,52 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Network Manager Hell</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2015-06-13-network-manager-hell.html">
+Network Manager Hell
+</a></h3>
+<!-- bashblog_timestamp: #201506130830.01# -->
+<div class="subtitle">June 13, 2015 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>I recently re-installed <strong>my laptop</strong> (which <strong>has loopback, WIFI and wired network connections</strong>) from scratch and I found that it has <strong>"NetworkManager is not running"</strong> displayed when I click the NetworkManager applet, which is <a href="https://askubuntu.com/questions/572003/network-manager-no-longer-starts-automatically/572007#572007">apparently</a> <a href="http://askubuntu.com/questions/429207/network-manager-not-running">not</a> <a href="http://ubuntuforums.org/showthread.php?t=2009719">that</a> <a href="http://ubuntuforums.org/showthread.php?t=1706208">strange</a>. This was straight after an install which was disappointing :-(</p>
+<p>My installation method for my laptop comes from an <strong>Ubuntu 14.04 Server</strong> base with some desktop components. The reason for this is that I have switched to OpenBox which is lovely compared to Unity and I don't run into the bugs I always do when customising XFCE... it's also lightning fast. Unfortunately sometimes because of this it's a bit difficult to google for answers...</p>
+<p>If I installed the desktop version of Ubuntu I believe it will let you use the the WIFI when installing (which is very nice) however when you install the server edition there is no prompt for wifi and I ended up <strong>plugging in a cable for the installation</strong>, this left my <code>/etc/network/interfaces</code> looking like the following:</p>
+<pre><code># This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto eth0
+iface eth0 inet dhcp
+</code></pre>
+<p>Which is pretty reasonable and correct... however this configuration causes NetworkManager to not start, or at least be disabled... You need to remove all the lines which reference <code>eth0</code> and then NetworkManager will start properly!</p>
+<p>Pretty surprised at this, as I have three network devices. Surely I've just gone down from 2 network devices being managed by <code>/etc/network/interfaces</code> to one, so I don't understand why NetworkManager would refuse to start and manage my WIFI in both cases...</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

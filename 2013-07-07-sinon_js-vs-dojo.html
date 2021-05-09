@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Sinon.js Vs Dojo</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2013-07-07-sinon_js-vs-dojo.html">
+Sinon.js Vs Dojo
+</a></h3>
+<!-- bashblog_timestamp: #201307070830.01# -->
+<div class="subtitle">July 07, 2013 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h4>Problem...</h4>
+<p>I was coding along quite happily on a project (soon to be unveiled) and got to testing my code that interacts with the server. I was intending to using Sinon.js to mock this, but the response was never coming back... My code was like this:</p>
+<pre><code>
+xhr("/dataset", {
+    handleAs: "json"
+}).then(function(data) {
+    //doSomething
+},function(err) {
+ //throw err
+});
+
+</code></pre>
+<p>Except that my code it never entered the success or failure... I figured it must still be waiting for a response, and this was correct because putting in a timeout:</p>
+<pre><code>
+xhr("/dataset", {
+    handleAs: "json",
+    timeout: 2000
+}).then(function(data) {
+    //doSomething
+},function(err) {
+ //throw err
+});
+
+</code></pre>
+<p>Caused it to call the error function after 2 seconds, but that does not explain why Sinon.js still did not respond.</p>
+<h4>Solution!</h4>
+<p>In the end I discovered <a href="https://groups.google.com/forum/?fromgroups=#!msg/sinonjs/HdsD4CL1Jq8/2rwpQx2_s5MJ">these posts</a> detailing that Dojo had moved onto the XHR2 spec, which is new and that is not supported by Sinon.</p>
+<p>In the end it seems the answer is to use a new "has" in your `dojoConfig`:</p>
+<pre><code>
+&#x3C;script type="text/javascript">
+    dojoConfig = {
+        async:true,
+        parseOnLoad: false,
+        cacheBust: false,
+        baseUrl: '/js',
+        has: {
+            'native-xhr2': false // Sinon.JS does not support XHR2
+        },
+    };
+&#x3C;/script>
+&#x3C;script src="/js/vendor/dojo/dojo.js">&#x3C;/script>
+
+</code></pre>
+<p>Which solved my problem, I was sooo happy when I found this!</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

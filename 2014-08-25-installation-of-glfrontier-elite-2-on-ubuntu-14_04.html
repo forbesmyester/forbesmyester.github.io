@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Installation of glFrontier: Elite 2 on Ubuntu 14.04</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2014-08-25-installation-of-glfrontier-elite-2-on-ubuntu-14_04.html">
+Installation of glFrontier: Elite 2 on Ubuntu 14.04
+</a></h3>
+<!-- bashblog_timestamp: #201408250830.01# -->
+<div class="subtitle">August 25, 2014 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<h4>Why</h4>
+<p>When I saw the <a href="https://www.kickstarter.com/projects/1461411552/elite-dangerous">Elite Kickstarter</a> I knew about the old Elite games which I never played but I knew had an amazing reputation. I looked around the page watched some video's and decided to back it. Since then I have read all the news releases and watched all the video's Frontier have put out and I'm really getting quite excited by now!</p>
+<p>Due to my pledge level I should be able to play the beta however because I am a Linux user I am probably going to have to wait a bit longer than most to be able to play it :-( For the time being I have decided to download one of the older Elite games to see what all the fuss was about.</p>
+<h4>Steps</h4>
+<p>This page documents the process of getting glFrontier Elite 2 working on a modern Ubuntu 14.04 system, I expect that this process is what will also work for Mac's however I am guessing it's a bit tougher to get the development libraries etc installed.</p>
+<ol>
+<li>Install the required development libraries with <code>apt-get install build-essential libvorbis-dev</code></li>
+<li>Download "source code (OpenGL, SD:: unix, mingw)" from <a href="http://tom.noflag.org.uk/glfrontier.html">http://tom.noflag.org.uk/glfrontier.html</a></li>
+<li>Extract it with <code>tar -jxf frontvm2-20060623.tar.bz2</code></li>
+<li>Enter the newly extracted directory</li>
+<li>Type <code>make -f Makefile-C</code> to compile the code, it does print out quite a few warnings, but did work (at least for me)</li>
+<li>At this point typing <code>./frontier</code> should launch the game, though it won't yet have any sound and will print lots of warnings about those missing sound files, so...</li>
+<li>We now need to download and install the sound files, these are hosted on the same <a href="http://tom.noflag.org.uk/glfrontier.html">http://tom.noflag.org.uk/glfrontier.html</a> page under thane mame "Sound effects and music (optional with the above). Download it.</li>
+<li>While still in the extracted game directory untar the sound file, for me it was <code>tar -jxf ../frontvm-audio-20060222.tar.bz2</code> which rather annoyingly created a sub directory, so I had to <code>mv frontvm-audio-20060222/* .; rm -rf frontvm-audio-20060222</code> to clean that up.</li>
+<li>Type <code>./frontier</code> and you have a fully working version of Frontier Elite 2!</li>
+</ol>
+<h4>Links</h4>
+<ul>
+<li><a href="This%20page">http://tenleftfingers.blogspot.co.uk/2014/01/playing-tom-mortons-glfrontier-on.html</a> was really helpful in getting the compile steps working.</li>
+<li>I used <a href="http://www.frontierastro.co.uk/Hires/hiresfe2.html">http://www.frontierastro.co.uk/Hires/hiresfe2.html</a> for how to setup the sound</li>
+<li>The main downloads are stored on <a href="http://tom.noflag.org.uk/glfrontier.html">http://tom.noflag.org.uk/glfrontier.html</a></li>
+</ul>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

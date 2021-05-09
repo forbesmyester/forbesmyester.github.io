@@ -1,0 +1,1346 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel><title>Matt at Keyboard Writes Code</title><link>http://matt-at.keyboard-writes-code.com//index.html</link>
+<description>A blog about software development, technology and other things that interest me</description><language>en</language>
+<lastBuildDate>Sun, 09 May 2021 08:20:31 +0100</lastBuildDate>
+<pubDate>Sun, 09 May 2021 08:20:31 +0100</pubDate>
+<atom:link href="http://matt-at.keyboard-writes-code.com//feed.rss" rel="self" type="application/rss+xml" />
+<item><title>
+Moving Blog to BashBlog
+</title><description><![CDATA[
+<p>I have Blog files stored in Markdown which I pre-process using <a href="https://github.com/remarkjs/remark">remark</a> and some <a href="https://github.com/forbesmyester/remark-unixpipe">custom</a> <a href="https://github.com/forbesmyester/remark-copy-code-meta-hash-up">plugins</a>.</p>
+<p>They all originally were from Jekyll and then Pelican but I've become disatisfied with them so I wanted to move to <a href="https://github.com/cfenollosa/bashblog">BashBlog</a> because I want something simple where the files are just pure markdown.</p>
+<p>There are two jobs in this tasks</p>
+<h4>Job 1: Change Front Matter into a H1 and <code>Tags: </code></h4>
+<h5>The one off...</h5>
+<p>Jekyll has content stored as Markdown with Front Matter above which looks like the following:</p>
+<pre><code>---
+title:        Code In PostgreSQL: Combining data from multiple tables with INNER JOIN
+date:         2019-03-04 21:00:20
+tags:         code-in-postgresql, javascript, postgresql
+category      postgresql
+---
+
+Welcome to my post, the H1 will automatically be written by the title in my front matter.
+
+## This is a H2
+</code></pre>
+<p>I need to convert this into</p>
+<pre><code># This is my real title
+
+And I have content
+
+## And other headers
+
+Tags: but, i-have, other-tags-too
+</code></pre>
+<p>This conversion is relatively for a one off via an AWK script</p>
+<pre><code class="language-javascript">BEGIN {
+    TAGS=""
+    CATEGORY=""
+    PRINT=0
+    TITLE=""
+}
+match($0, /^tags: +(.*)/, match_arr) {
+    TAGS=match_arr[1]
+    $0=""
+}
+match($0, /^category: +(.*)/, match_arr) {
+    CATEGORY=match_arr[1]
+    $0=""
+}
+match($0, /^title: +(.*)/, match_arr) {
+    TITLE=match_arr[1]
+}
+PRINT==1 { print $0 }
+TITLE &#x26;&#x26; match($0, /^---/) {
+    print "#", TITLE
+    print ""
+    PRINT=1
+}
+END {
+    if (TAGS &#x26;&#x26; CATEGORY) {
+        printf "Tags: %s, %s", TAGS, CATEGORY
+        exit 0
+    }
+    if (TAGS) {
+        printf "Tags: %s", TAGS
+        exit 0
+    }
+    if (CATEGORY) {
+        printf "Tags: %s", CATEGORY
+        exit 0
+    }
+}
+</code></pre>
+<p>The basic idea is that</p>
+<ol>
+<li>It pulls out the <code>tags:</code>, <code>category:</code> and <code>title:</code></li>
+<li>If the title is defined and you hit a line that begins with <code>---</code></li>
+<li>Print out the H1 tag (title)</li>
+<li>If the title has been printed out, print out the current line</li>
+<li>Finally print out the <code>category:</code> and <code>tags:</code> as tags.</li>
+</ol>
+<p>You can run this with <code>cat your_jekyll.md | awk -f convert_post.awk</code> and it will print the BashBlog output to STDOUT.</p>
+<h5>Every file</h5>
+<p>To do this for every file is relatively simple with GNU Parallel</p>
+<pre><code class="language-bash">find 2*.md | parallel mv {} {}.x
+find 2*.md.x | parallel cat {} '|' awk -f convert_post.awk '>' {.}
+rm *.x
+</code></pre>
+<h4>Job 2: File names with multiple periods (.)</h4>
+<p>function multi_dot() {
+FILENAME="$1"
+FILENAME_NO_EXT="$(echo "$FILENAME" | sed 's/.md$//')"
+NEW_FILENAME="$(echo "$FILENAME_NO_EXT" | sed 's/./_/g').md"
+mv "$FILENAME" "$NEW_FILENAME"
+}
+export -f multi_dot</p>
+<p>find <em>.</em>.md | parallel multi_dot</p>
+<h4>Job 3: Correct Dates</h4>
+<p>Given I have files like <a href="2019-07-24-ndjson-env.md">2019-07-24-ndjson-env.md</a> which encode the date it shouldn't be too hard, but BashBlog wants to store the date within a comment of the HTML file that looks like <code>&#x3C;!-- bashblog_timestamp: #202105031115.27# --></code>.</p>
+<p>If I want to import my data I can copy the markdown file into the working directory and run <code>bb.sh edit MARKDOWN_FILE.md</code> which will open up my <code>$EDITOR</code> and, upon save, generate a HTML file with the timestamp of <code>$(date)</code>.</p>
+<p>To do a mass import I will need to do some thinking:</p>
+<h4>Generating the HTML for blog post</h4>
+<p>if I run <code>bb.sh edit 2019-07-24-ndjson-env.md</code> and there is no <code>2019-07-24-ndjson-env.html</code> BashBlog will exit with the status code 255 and the following output:</p>
+<pre><code>$ ./bb.sh edit 2019-07-24-ndjson-env.md
+Can't edit post 2019-07-24-ndjson-env.html, did you mean to use "bb.sh.sh post &#x3C;draft_file>"?
+</code></pre>
+<p>This is easily solved by a <code>touch 2019-07-24-ndjson-env</code> and then re-running:</p>
+<pre><code>$ touch  2019-07-24-ndjson-env.html
+$ bb.sh edit 2019-07-24-ndjson-env.md
+MARKDOWN: /home/fozz/Projects/plain-text-blog/markdown
+Posted 2019-07-24-ndjson-env.html
+Rebuilding tag pages .
+Rebuilding the index ........
+Creating an index page with all the posts ........
+Creating an index page with all the tags ...
+Making RSS ........
+</code></pre>
+<p>Which is a good process, but I don't want to re-open my <code>$EDITOR</code> for every post...</p>
+<h4>The fake <code>$EDITOR</code></h4>
+<p>If BashBlog always uses <code>$EDITOR</code> to allow you to edit before a post, why not set <code>$EDITOR</code> to something which will take the parameter of a file, will return a exit code of 0, but not be interactive... something like <code>echo</code>.</p>
+<p>So now our <code>bb.sh edit ...</code> command now looks like <code>env EDITOR=echo bb.sh edit 2019-07-24-ndjson.env.md</code></p>
+<h4>The Date</h4>
+<p>Having done all this BashBlog will still think the date of the post is now, because it has no logic to read the date from the filename, only from the <code>bashblog_timestamp</code> comment within the HTML file (falling back to <code>$(date)</code>);</p>
+<p>The following command will use <code>sed</code> to replace the date:</p>
+<pre><code>sed 's/\(&#x3C;!-- bashblog_timestamp: #\).*\(# -->\)/\1YOUDATE\2/' -i 2019-07-24-ndjson-env.html
+</code></pre>
+<h4>One Blog Post</h4>
+<p>To restore just one Blog post we would need to run the following commands:</p>
+<pre><code>DATE="$(echo "2019-07-24-ndjson-env.md" | cut -d '-' -f 1,2,3 | sed 's/\-//g')0830.01"
+touch "2019-07-24-ndjson-env.html"
+env EDITOR=echo bb.sh edit "2019-07-24-ndjson-env.md"
+sed 's/\(&#x3C;!-- bashblog_timestamp: #\).*\(# -->\)/\1'"$DATE"'\2/' -i "2019-07-24-ndjson-env.html"
+</code></pre>
+<p>But after this the post will display the current date within the file and if you <code>bb.sh edit 2019-07-24-ndjson-env.md</code> it will reset the date still, because for <code>bb.sh edit</code> the date of the file still takes precedence.</p>
+<p>The clue to fixing this is in the changelog, it says:</p>
+<blockquote>
+<p>2.7 Store post date on a comment in the html file (#96).
+On rebuild, the post date will be synchronised between comment date and file date, with precedence for comment date.</p>
+</blockquote>
+<p>So all we need to do is run <code>bb.sh rebuild</code> and it changes the date of the file to the <code>bashblog_timestamp</code> and upates the text of the HTML to the correct date.</p>
+<h4>Many posts</h4>
+<p>This is all great. But I need to update a lot of blog posts so I'll turn to my old friend GNU parallel:</p>
+<p>First putting the above into script called <code>publish-dated-md</code>:</p>
+<pre><code class="language-bash">#!/bin/bash
+
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "= BEGIN ================="
+FILENAME="$1"
+echo "PROCESSING FILE: $FILENAME"
+FILENAME_HTML="$(echo "$FILENAME" | sed 's/md$/html/')"
+DATE="$(echo "$FILENAME" | cut -d '-' -f 1,2,3 | sed 's/\-//g')0830.01"
+touch "$FILENAME_HTML"
+echo "== BB START =="
+env EDITOR=echo bb.sh edit "$FILENAME"
+echo "== BB END ===="
+sed 's/\(&#x3C;!-- bashblog_timestamp: #\).*\(# -->\)/\1'"$DATE"'\2/' -i "$FILENAME_HTML"
+echo "= END ==================="
+</code></pre>
+<p>And then running it on all the files:</p>
+<pre><code class="language-bash">find *.md | grep '^[0-9]\{4\}' | parallel -j1 --halt now,fail=1 publish-dated-md {}
+bb.sh rebuild
+</code></pre>
+<p>Which pretty much does the same as in the "One Blog Post" header, but using <a href="https://www.gnu.org/software/parallel/">GNU Parallel</a> to process all the files and then runs a <code>bb.sh rebuild</code> at the end to clean it all up.</p>
+<p>Tags: <a href='tag_blogging.html'>blogging</a>, <a href='tag_bashblog.html'>bashblog</a>, <a href='tag_bash.html'>bash</a>, <a href='tag_gnu-parallel.html'>gnu-parallel</a></p>
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2021-05-04-moving-blog-to-bashblog.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2021-05-04-moving-blog-to-bashblog.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Tue, 04 May 2021 08:30:01 +0100</pubDate></item>
+<item><title>
+EsqlateQueue now supports parallelism!
+</title><description><![CDATA[
+<p>Previously I wrote about <a href="./2019-09-16-esqlate-queue.html">EsqlateQueue</a>, which is a mini library allowing a queue of work to be set aside and worked on out-of-process. This is useful for things which could be IO intensive and take a while, but don't take a lot of CPU time.</p>
+<p>Because this was the first version it just took items off the queue one by one for processing.</p>
+<p>This is still useful, but perhaps it might be more useful to be able to do these things in parallel?</p>
+<p>The new version, version 2 is built upon <a href="https://caolan.github.io/async/v3/">async</a> and does parallelism up to the amount specified!</p>
+<p>The API is 100% compatible, just an extra optional (default 1) parameter to say how parallel you want it.</p>
+<h5>Installation</h5>
+<p>To install, use NPM:</p>
+<pre><code>npm install esqlate-queue
+</code></pre>
+<h5>License</h5>
+<p>The code is licensed under MIT.</p>
+<p>You can find this project at <a href="https://github.com/forbesmyester/esqlate-queue">GitHub</a>.</p>
+<p>Tags: <a href='tag_typescript.html'>typescript</a>, <a href='tag_nodejs.html'>nodejs</a>, <a href='tag_parallelism.html'>parallelism</a></p>
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-10-20-esqlate-queue-supports-parallelism.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-10-20-esqlate-queue-supports-parallelism.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Sun, 20 Oct 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+Esqlate Cache
+</title><description><![CDATA[
+<h5>Why does this exist?</h5>
+<p>Esqlate Cache is a really basic in-memory cache which has a few interesting properties:</p>
+<ul>
+<li>You initialize the cache with the function to retrieve the value from the original source, enabling you to write <code>cache(params)</code> everywhere, whether the item is cached or not. The reason for this is that I found that anything which I wanted to cache was nearly always something that was IO based that I wanted to dependency inject anyway and I would always DI both the cache and the IO operation. Would it not be better to dependency inject one thing?</li>
+<li>It handles race conditions nicely. If a result for a set of parameters is already in the process of being acquired, it will not not start acquiring another, but will return the one result to both requesters.</li>
+<li>It realistically only caches the result from one (promise based) function. I think this is a good thing because it helps TypeScript typing and thus, greatly helps readability.</li>
+</ul>
+<h5>How do you use it?</h5>
+<p>Usage is quite simple:</p>
+<pre><code class="language-js">import getCache, { EsqlateCache } from "esqlate-cache";
+
+// Parameters can be whatever you like, and however many you wish, but they must be JSON serializable.
+function getStatusCodeForUrl(p: string): Promise&#x3C;number> {
+    fetch(url).then((resp) => resp.status);
+}
+
+
+const cache: EsqlateCache&#x3C;number> = getCache(getStatusCodeForUrl);
+
+const uncachedResult = await cache("http://www.google.com");
+const cachedResult = await cache("http://www.google.com");
+const anotherUncachedResult = await cache("http://duckduckgo.com");
+</code></pre>
+<h5>How do I install it?</h5>
+<p>The code is clone-able from here but it you would normally <code>npm install esqlate-cache</code>.</p>
+<h5>What is the license?</h5>
+<p>It's MIT licensed.</p>
+<p>You can find this project at <a href="https://github.com/forbesmyester/esqlate-cache">GitHub</a>.
+Tags: typescript, javascript, caching, io, types, race-condition, library</p>
+
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-10-15-esqlate-cache-a-typescript-cache-that-handles-races-and-getting-data.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-10-15-esqlate-cache-a-typescript-cache-that-handles-races-and-getting-data.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Tue, 15 Oct 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+Esqlate WaitFor
+</title><description><![CDATA[
+<p>A simple TypeScript function will wait for a condition to be satisfied.</p>
+<h5>Why</h5>
+<p>The Esqlate project, which is a way to design an API using PostgreSQL is modelled as a queue based system, so when you issue a request, you don't get back the result immediately, you need to poll to monitor you request. Esqlate WaitFor was created as a to manage that polling.</p>
+<h5>How</h5>
+<p>To use Esqlate WaitFor you need to supply a function which will return <code>Ready&#x3C;X></code>, where <code>X</code> is the result you wish to finally receive. A <code>Ready</code> is somewhat like a Promise, but instead of it being resolved or not, the <code>Ready</code> can be in a state of <code>{ complete: true, value: "TheValueYouWant" }</code> or <code>{ complete: false }</code>. This is similar to an <a href="https://en.wikipedia.org/wiki/Algebraic_data_type">Algebraic data type</a> like <a href="https://wiki.haskell.org/Maybe">Haskell's Maybe</a> or may <a href="https://doc.rust-lang.org/std/result/">Rust's Result</a>.</p>
+<h5>Installation</h5>
+<pre><code class="language-bash">npm install --save esqlate-waitfor
+</code></pre>
+<h5>Usage</h5>
+<p>A Ready is defined like the following:</p>
+<pre><code class="language-typescript">export interface Ready&#x3C;X> {
+    value?: X;
+    complete: boolean;
+}
+</code></pre>
+<p>Therefore main thing we need to do is define a function which returns a <code>Ready</code>, in this case <code>getReady()</code>. aside from this we need to add a function to control how the back-off works when attempts are unsuccessful, similar to <code>calcuateNewDelay()</code>.</p>
+<pre><code class="language-javascript">let location = "http://localhost:8803/request/get_customer/wbzAClFJ
+
+// Returns a `Ready`.
+function getReady() {
+    return fetch(location)
+        .then(resp => resp.json())
+        .then((j) => {
+            if (j.status == "complete") {
+                return { complete: true, value: j.location };
+            }
+            return { complete: false };
+        });
+}
+
+// Gets the amount of time to wait before a new attempt starts.
+function calculateNewDelay(attemptsSoFar) { return attemptsSoFar * 300; }
+
+return waitFor(getReady, calculateNewDelay)
+    .then((loc) => {
+        window.location = loc;
+    });
+</code></pre>
+<p>You can find this project at <a href="https://github.com/forbesmyester/waitfor-ts">GitHub</a>.
+Tags: typescript, javascript, algebraic, data, types, polling, library</p>
+
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-09-23-waitfor-ts-will-poll-until-it-gets-a-result.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-09-23-waitfor-ts-will-poll-until-it-gets-a-result.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Mon, 23 Sep 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+EsqlateQueue - Push to a AsyncIterableIterator
+</title><description><![CDATA[
+<h5>Why</h5>
+<p>Sometimes you want to process something, but you're not interested in the result immediately because the task is not a priority to you, or maybe even the user.</p>
+<p>For this you may well use a Queue of some variety, something like <a href="https://www.rabbitmq.com/">RabbitMQ</a>, <a href="https://aws.amazon.com/sqs/">Amazon AWS's SQS</a> or maybe even <a href="https://zeromq.org/">ZeroMQ</a>.</p>
+<p>These are all fantastic technologies but:</p>
+<ul>
+<li>The first two require infrastructure (so perhaps not great for an OSS project you want people to use).</li>
+<li>The latter, you just get a message out, which is untyped and is perhaps overly complicated / higher barrier to entry for some use cases.</li>
+</ul>
+<p>However if your task is mainly just running a few <a href="https://www.postgresql.org/">PostgreSQL</a> queries:</p>
+<ul>
+<li>Your CPU requirements for the process are probably small (you're doing mostly IO) and PostgreSQL is taking the load.</li>
+<li>You can't simply scale to many nodes without complications such as <a href="https://pgbouncer.github.io/">pgBouncer</a> or similar because of how PostgreSQL handles connections (memory).</li>
+<li>You want to keep it super simple as you know the demand for the service will be small.</li>
+</ul>
+<p>If these are your requirements and you're using TypeScript, you may want a typed solution for a really simple Queue this may be the answer.</p>
+<h5>What it does</h5>
+<p>This allows you to use one simple worker function (<code>EsqlateQueueWorker&#x3C;Q, R> = (item: Q) => Promise&#x3C;R></code>) which has a parameter of a queue item, and transforms it into the item you want as the finished product and the end of the queue.</p>
+<p>Passing this <code>EsqlateQueueWorker</code> to the <code>getEsqlateQueue()</code> function will return an object with two methods, these are:</p>
+<ul>
+<li><code>push()</code> which you use to add things for processing.</li>
+<li><code>results()</code>, which will when called, return an <code>AsyncIterableIterator</code> which you can use a <code>for-of</code> to get the results.</li>
+</ul>
+<p>Currently it does not support any form of parallelism, but is well typed and has zero dependencies.</p>
+<h5>Example</h5>
+<pre><code class="language-typescript">import { EsqlateQueueWorker } from '../src/index';
+import getEsqlateQueue from '../src/index';
+
+
+// Create a worker. This will be used to process the items in the Queue.
+const queueWorker: EsqlateQueueWorker&#x3C;number,string> = (n) => {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve("Number: A" + n);
+        }, 5);
+    });
+};
+
+// Create an instance of the Queue
+const esqlateQueue = getEsqlateQueue(queueWorker);
+
+// Push items onto the Queue... afterwards, otherwise we'd never get to the loop
+setTimeout(
+    async () => {
+        results.push("ADD");
+        esqlateQueue.push(1);
+        esqlateQueue.push(2);
+    },
+    500
+);
+
+let n = 1;
+
+// Process the Queue Results (which also start the queue processing)
+for await (const s of esqlateQueue.results()) {
+    assert(s == "Number: A" + (n++));
+}
+
+</code></pre>
+<h5>Installation</h5>
+<p>To install, use NPM:</p>
+<pre><code>npm install esqlate-queue
+</code></pre>
+<h5>License</h5>
+<p>The code is licensed under MIT.</p>
+<p>You can find this project at <a href="https://github.com/forbesmyester/esqlate-queue">GitHub</a>.
+Tags: typescript, queue</p>
+
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-09-16-esqlate-queue.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-09-16-esqlate-queue.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Mon, 16 Sep 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+ndjson-env - Loads environment from ndjson files, selected by <code>jq ._name</code>
+</title><description><![CDATA[
+<h4>Description</h4>
+<p>I have a tool called <a href="https://github.com/forbesmyester/psql-tools#pgpass-env">pgpass-env</a> that, given a suitably commented PostgreSQL <code>~/.pgpass</code> file will allow you to easily set the environmental variables for software that doesn't support reading from that format.</p>
+<p>Thinking about this problem, it seems to be a general problem:</p>
+<ul>
+<li>Given a file, which somehow has a list of sets of values of environmental variables you may want to apply.</li>
+<li>And a way to identify which values you wish to apply.</li>
+<li>Apply those environmental variables.</li>
+</ul>
+<p>This is what this software does.</p>
+<h4>Example</h4>
+<p>The environmental variables are stored in any file as NDJSON. For example a file that sets up environmental variables for the JDK might look something like this:</p>
+<pre><code>{"_name": "JDK18", "JAVA_HOME": "/use/local/j2sdk-1.8"}
+{"_name": "JDK111", "JAVA_HOME": "/use/local/j2sdk-1.11", "CLASSPATH": "/somewhere/else"}
+</code></pre>
+<p>This could might be stored in <code>~/.jdk-env-vars</code>, if it were you could apply the <code>JDK111</code> environmental variables using the following:</p>
+<pre><code class="language-bash">. ndjson-env -f ~/.jdk-env-vars JDK111
+</code></pre>
+<p>Once you've ran this the <code>JAVA_HOME</code> and <code>CLASSPATH</code> environmental variables will be set up. NOTE: The <code>.</code> before the command is important, it pulls the environmental variables defined in the script into your current environment.</p>
+<h4>Usage</h4>
+<pre><code>NAME:
+  ndjson-env - Loads environment from ndjson files, selected by `jq ._name`
+
+USAGE:
+  ndjson-env -f FILE [NAME_OF_ENV_SET]
+
+GLOBAL OPTIONS:
+  -f    The file to load environment sets from
+  -h    Get (this) help
+
+ARGUMENTS:
+  NAME_OF_ENV_SET    The name of the environment to list (will list all if not specified)
+</code></pre>
+<h4>Installation</h4>
+<p>Installation is simple with BASH:</p>
+<pre><code class="language-shell">mkdir -p ~/.local/bin &#x26;&#x26; cp ./ndjson-env ~/.local/bin/ndjson-env &#x26;&#x26; chmod +x ~/.local/bin/ndjson-env
+</code></pre>
+<p>You can find this project at <a href="https://github.com/forbesmyester/ndjson-env">GitHub</a>.
+Tags: postgresql, unix, linux, environmental variables</p>
+
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-07-24-ndjson-env.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-07-24-ndjson-env.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Wed, 24 Jul 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+jdbc-pipe
+</title><description><![CDATA[
+<p>Quick JDBC queries respecting UNIX conventions (environmental variables, STDIN, STDOUT etc)</p>
+<h4>Installation</h4>
+<ol>
+<li>Install the <a href="https://openjdk.java.net/">Java SDK</a>, preferably avoiding Oracle.</li>
+<li>Install <a href="https://leiningen.org/">Leiningen</a>.</li>
+<li>Check this project out and cd into it (<code>git clone git@github.com:forbesmyester/jdbc-pipe.git &#x26;&#x26; cd jdbc-pipe</code>)</li>
+<li>Run <code>lein uberjar</code>.</li>
+<li>Create the destination directories in to ~/.local/bin <code>mkdir -p ~/.local/bin/jdbc-pipe-jars</code></li>
+<li>Copy the JAR's and the bash script <code>cp target/uberjar/jdbc-pipe-*-standalone.jar ~/.local/bin/jdbc-pipe-jars/ &#x26;&#x26; cp ./bin/jdbc-pipe ~/.local/bin</code></li>
+<li>SLF4J which is in libraries this code uses is slightly noisy, might want to dig out slf4j-nop-?.?.??.jar from <a href="https://www.slf4j.org/download.html">https://www.slf4j.org/download.html</a> and drop it <code>~/.local/bin/jdbc-pipe-jars/</code> too.</li>
+<li>You may also want to put your chosen JDBC drivers in the <code>~/.local/bin/jdbc-pipe-jars/</code>.</li>
+</ol>
+<h4>Usage</h4>
+<pre><code class="language-bash">echo 'SELECT * FROM "@user".table_name limit 50' | java -cp "$PWD/target/uberjar/*" jdbc_pipe.core  csv -u username -p password -c "jdbc:url" -d "com.data-vendor.Driver" -s "sub-protocol"
+</code></pre>
+<h4>Options</h4>
+<pre><code>NAME:
+ jdbc-pipe - Quick JDBC queries respecting UNIX conventions (environmental variables, STDIN, ST
+DOUT etc)
+
+USAGE:
+ jdbc-pipe [global-options] command [command options] [arguments...]
+
+VERSION:
+ 0.0.1
+
+COMMANDS:
+   ndjson               Runs a query outputting JSON
+   edn                  Runs a query outputting EDN
+   csv                  Runs a query outputting csv
+   tsv                  Runs a query outputting tsv
+
+GLOBAL OPTIONS:
+       --classname S    JDBC Driver Class [$JDBC_PIPE_CLASSNAME]
+       --subprotocol S  JDBC Sub Protocol / Vendor [$JDBC_PIPE_SUBPROTOCOL]
+       --subname S      JDBC Sub Name / Database Name [$JDBC_PIPE_SUBNAME]
+   -u, --user S         JDBC User [$JDBC_PIPE_USER]
+   -p, --password S     JDBC Password [$JDBC_PIPE_PASSWORD]
+       --name S         JDBC Name [$JDBC_PIPE_NAME]
+       --host S         JDBC Host [$JDBC_PIPE_HOST]
+       --port S         JDBC Port [$JDBC_PIPE_PORT]
+       --vendor S       JDBC Vendor [$JDBC_PIPE_VENDOR]
+       --schema S       JDBC Schema [$JDBC_PIPE_SCHEMA]
+       --read-only S    JDBC Read Only [$JDBC_PIPE_READ_ONLY]
+   -r, --uri S          JDBC URI or Connection String [$JDBC_PIPE_URI]
+   -?, --help
+</code></pre>
+<p>You can find this project at <a href="https://github.com/forbesmyester/jdbc-pipe">GitHub</a>.
+Tags: postgresql, unix, linux</p>
+
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-07-05-jdbc-pipe-jdbc-pipe-quick-jdbc-queries-respecting-unix-conventions-environmental-variables-stdin-stdout.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-07-05-jdbc-pipe-jdbc-pipe-quick-jdbc-queries-respecting-unix-conventions-environmental-variables-stdin-stdout.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Fri, 05 Jul 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+Hacky tools for PostgreSQL
+</title><description><![CDATA[
+<p>Hacky tools for PostgreSQL that makes interacting / extracting / analysis of data in PostgreSQL easier.</p>
+<p><img src="/content-assets/screenshot.png" alt="screenshot"></p>
+<p>NOTE: Examples are from a PostgreSQL version of <a href="https://ergast.com/mrd/">ergast</a>.</p>
+<h4>psql-out</h4>
+<p>Sometimes I find I have requests like the following:</p>
+<blockquote>
+<p>Run this query and give me the results [in an Excel file so I can look at them in Excel].</p>
+</blockquote>
+<p>Also sometimes I want to:</p>
+<blockquote>
+<p>Run a complicated query and get the results as <a href="http://ndjson.org/">ndjson</a> so I can process them in JavaScript.</p>
+</blockquote>
+<p>But sometimes I'm:</p>
+<blockquote>
+<p>Looking at data trying to figure out if a hypothesis makes sense and want to throw things into graphs very, very quickly.</p>
+</blockquote>
+<p>It's not cool, it's not pretty, but this is what <code>psql-out</code> is for!</p>
+<p>If you've got your environmental variables set up (see <code>pgpass-env</code> lower down) you can do something like the following:</p>
+<pre><code class="language-shell">echo 'select name, position from competitors' | psql-out
+</code></pre>
+<p>And get a well formed CSV file out into STDOUT.</p>
+<p>To write it to a file you just need to add <code>> your_file.csv</code> to the end to pipe STDOUT to the desired file:</p>
+<pre><code class="language-shell">echo 'select name, position from competitors' | psql-out > your_file.csv
+</code></pre>
+<p>If you want it as an ndjson file you can run</p>
+<pre><code class="language-shell">echo 'select name, position from competitors' | psql-out -f ndjson
+</code></pre>
+<p>To get an ndjson file out. You can also get a TSV (Tab seperated CSV) out by passing <code>-t tsv</code>.</p>
+<h4>termgraph-runner</h4>
+<p>When you've got your nice CSV using the tools from above and you want to see if the data looks correct quickly one of the best ways I know to do this is to draw a quick graph. You could fire up Excel or <a href="https://www.libreoffice.org/">LibreOffice</a> and pointy-clicky to get your graph. This is a <strong>really</strong> bad solution if you're still finding out whether your data is correct because that feedback loop of command-line -> csv -> spreadsheet > graph is pretty long. What if you could quickly draw graphs right in your terminal... You can using termgraph-runner (which is backed by the awesome <a href="https://github.com/mkaz/termgraph">termgraph</a>.</p>
+<pre><code class="language-shell">
+echo '
+    select
+        code,
+        sum(CASE WHEN position = 1 THEN 1 ELSE 0 END) as win,
+        sum(CASE WHEN position &#x3C;= 3 THEN 1 ELSE 0 END) as podium
+    from results
+    natural join drivers
+    group by code
+    order by 2 desc limit 5' | psql-out -f csv | termgraph-runner --stacked
+
+</code></pre>
+<h4>pgpass-env</h4>
+<p>I found that I have files that look like the following in the root of most of my source code repositories (and in my <code>.gitignore</code> of course):</p>
+<pre><code class="language-shell">export PGHOST="127.0.0.1"
+export PGDATABASE="my_product"
+export PGUSER="my_product"
+export PGPASSWORD="a_good_password"
+export PGPORT="5432"
+export LISTEN_PORT="4040"
+</code></pre>
+<p>However for my database administration GUI I also have a <code>~/.pgpass</code> file in my home directory with the following:</p>
+<pre><code>127.0.0.1:5432:my_product:my_product:a_good_password
+</code></pre>
+<p>This is a duplication of data and is kinda ridiculous.</p>
+<p>Enter <code>pgpass-env</code> which is a simple bash script that converts the former into the latter</p>
+<p>The idea is to store a name above the lines in the ~/.pgpass like the following</p>
+<pre><code># local_my_product
+127.0.0.1:5432:my_product:my_product:a_good_password
+# local_another_product
+127.0.0.1:5432:another_product:another_product:a_good_password
+</code></pre>
+<p>Running just <code>pgpass-env</code> it gives you a list of possible options:</p>
+<pre><code class="language-shell">$ pgpass-env
+Pass one of the following
+    * local_my_product
+    * local_another_product
+</code></pre>
+<p>But if you would pass the name of a connection it would output:</p>
+<pre><code class="language-shell">$ . pgpass-env local_my_product
+> postgres://my_product@127.0.0.1:5432/my_product
+</code></pre>
+<p>While at the same time performing the required <code>EXPORT PGUSER=my_product</code> etc. Using the preceding <code>.</code> means those environmental variables will be brought into the current environment, which is probably what you want.</p>
+<p>It also adds adds <code>$DATABASE_URL</code> which I use in <a href="https://github.com/tpope/vim-dadbod">vim-dadbod</a> but I also understand is used by Heroku.</p>
+<p>NOTE: Look at the BASH source code, <code>pgpass-env</code> is quick, simple code to get the job done, <strong>not</strong> perfect code. You can see that the .pgpass fields are separated by <code>:</code> but I have put no thought in how to escape a <code>:</code> should one be included in a password. If your password includes a <code>:</code> it'll probably break.</p>
+<h4>Installation</h4>
+<p>Installation is simple with some BASH tomfoolery:</p>
+<pre><code class="language-shell">mkdir -p ~/.local/bin &#x26;&#x26; find . -maxdepth 1 -type f -executable | parallel ln -s "$PWD/{/}" ~/.local/bin
+</code></pre>
+<h4>Other interesting tools I've found to do portions of this...</h4>
+<p>I've not found anything that I can use to draw pie charts simply in the terminal - ideas welcome.</p>
+<h5>Software</h5>
+<ul>
+<li><a href="https://github.com/mcastorina/graph-cli">graph-cli</a> Can accept input from STDIN and will pop up your graph in a window.</li>
+<li><a href="https://veusz.github.io/">Veusz</a> Is a desktop app which looks like a mix of Tableau and a DTP application. It's file format is plain text and it even has a Python API. It should be possible to wrap this and spit out a great image file.</li>
+<li><a href="https://github.com/dkogan/feedgnuplot">feedgnuplot</a> looks like the thing I'd use if I wanted to draw a line graph. Because it's based on gnuplot it can draw your line graph right in the terminal or can popup a window.</li>
+</ul>
+<h5>Libraries</h5>
+<ul>
+<li><a href="https://github.com/tidyverse/ggplot2">ggplot</a> is an R library for drawing graphs, could probably whip something up again to output an image file.</li>
+<li><a href="https://vega.github.io/">vega</a> and vega-lite are by far the best JavaScript graphing libraries I've ever come across. You can specify a graph using just json and they have a <a href="https://vega.github.io/vega/usage/#cli">CLI interface</a> that can spit out png's etc.</li>
+</ul>
+<p>You can find this project at <a href="https://github.com/forbesmyester/psql-tools">GitHub</a>.</p>
+<p>Tags: <a href='tag_linux.html'>linux</a>, <a href='tag_unix.html'>unix</a>, <a href='tag_cli.html'>cli</a>, <a href='tag_command-line.html'>command-line</a>, <a href='tag_postgresql.html'>postgresql</a></p>
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-06-14-hacky-tools-for-postgresql.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-06-14-hacky-tools-for-postgresql.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Fri, 14 Jun 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+Code In PostgreSQL: Combining data from multiple tables with INNER JOIN
+</title><description><![CDATA[
+<h4>This series of articles</h4>
+<p>This is the third of the Code in PostgreSQL series of articles.</p>
+<h5>Articles in this series</h5>
+<ul>
+<li><a href="2019-03-03-code-in-postgresql-in-order-by-limit.html">You can do lots with just IN, ORDER BY and LIMIT</a></li>
+<li><a href="2019-03-12-code-in-postgresql-with.html">You can use WITH to name specific parts of SQL</a></li>
+<li><a href="2019-05-15-code-in-postgresql-inner-join.html">Combining data from multiple tables with INNER JOIN</a></li>
+<li>A NoSQL developer might not know about: GROUP BY ( Soon to be published )</li>
+<li>Sub select ( Soon to be published )</li>
+<li>Variables ( Soon to be published )</li>
+<li>Prepare JSON ( Soon to be published )</li>
+<li>Create Function (and testing it) ( Soon to be published )</li>
+<li>Custom Aggregates ( Soon to be published )</li>
+</ul>
+<h5>The reason why SQL is so important</h5>
+<p>When developing systems we often have a choice of writing code (NodeJS, C#, Python or PHP etc) or SQL. I believe that sometimes the decision to write code is taken without fully evaluating how much of the task could be offloaded to SQL.</p>
+<p>In this series of articles I wish to show the huge benefits of using and learning SQL by examining progressively more difficult scenarios with increasing amounts of SQL knowledge. In doing this I hope to illustrate that sometimes large amounts of extra code is written for what SQL can achieve quicker, with less complexity and more readability.</p>
+<p>To be more specific, we should try to follow the <a href="https://en.wikipedia.org/wiki/Rule_of_least_power">rule of least power</a> more often.</p>
+<h5>About the Ergast data set</h5>
+<p>For this series of articles we will be using the <a href="https://ergast.com/mrd">Ergast</a> data set, which is a provided under the <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">Attribution-NonCommercial-ShareAlike 3.0 Unported Licence</a>.</p>
+<h5>Setting up the Ergast database within PostgreSQL</h5>
+<p>To set up the <a href="https://ergast.com/mrd">Ergast</a> database within PostgreSQL I did the following:</p>
+<p>I allowed <code>psql</code> and friends to work without me having to put in a password all the time by configuring the <a href="https://www.postgresql.org/docs/current/libpq-envars.html">PostgreSQL environmental variables</a>.</p>
+<pre><code class="language-bash">export PGUSER=postgres PGPASSWORD=postgres PGDATABASE=postgres PGHOST=127.0.0.1
+</code></pre>
+<p>Then import the <a href="http://ergast.com/">Ergast</a> database. NOTE: At the time of writing I was unable to install the PostgreSQL version.</p>
+<pre><code class="language-bash">wget -O /tmp/f1db_ansi.sql.gz http://ergast.com/downloads/f1db_ansi.sql.gz
+cat /tmp/f1db_ansi.sql.gz | \
+    gzip -d | \
+    sed 's/int(..)/int/' | \
+    sed 's/ \+AUTO_INCREMENT//' | \
+    sed "s/\\\'/\'\'/g" | \
+    sed 's/UNIQUE KEY \"\(\w\+\)\"/UNIQUE /' | \
+    sed 's/^ *KEY .*(\"\(.*\)\")/CHECK ("\1" > 0)/' | \
+    sed 's/ date NOT NULL DEFAULT .0000.*,/ date,/'| psql
+</code></pre>
+<h4>The Aim</h4>
+<p>At the end of the <a href="2019-03-12-code-in-postgresql-with.adoc">last article</a> we had the following dataset:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">points</th><th align="left">driverId</th><th align="left">year</th></tr></thead><tbody><tr><td align="left">363</td><td align="left">1</td><td align="left">2017</td></tr><tr><td align="left">317</td><td align="left">20</td><td align="left">2017</td></tr><tr><td align="left">305</td><td align="left">822</td><td align="left">2017</td></tr><tr><td align="left">205</td><td align="left">8</td><td align="left">2017</td></tr><tr><td align="left">200</td><td align="left">817</td><td align="left">2017</td></tr><tr><td align="left">168</td><td align="left">830</td><td align="left">2017</td></tr><tr><td align="left">100</td><td align="left">815</td><td align="left">2017</td></tr><tr><td align="left">87</td><td align="left">839</td><td align="left">2017</td></tr><tr><td align="left">54</td><td align="left">832</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">13</td><td align="left">2017</td></tr><tr><td align="left">43</td><td align="left">807</td><td align="left">2017</td></tr><tr><td align="left">40</td><td align="left">840</td><td align="left">2017</td></tr><tr><td align="left">28</td><td align="left">154</td><td align="left">2017</td></tr><tr><td align="left">19</td><td align="left">825</td><td align="left">2017</td></tr><tr><td align="left">17</td><td align="left">4</td><td align="left">2017</td></tr><tr><td align="left">13</td><td align="left">838</td><td align="left">2017</td></tr><tr><td align="left">8</td><td align="left">835</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">826</td><td align="left">2017</td></tr><tr><td align="left">5</td><td align="left">836</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">18</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">814</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">828</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">841</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">842</td><td align="left">2017</td></tr><tr><td align="left">0</td><td align="left">843</td><td align="left">2017</td></tr></tbody></table>
+<p>I would like to augment this dataset with the names of the drivers, so the results would look something like the following:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">points</th><th align="right">driverId</th><th align="left">forename</th><th align="left">surname</th><th align="right">year</th></tr></thead><tbody><tr><td align="right">363</td><td align="right">1</td><td align="left"><em>forename</em></td><td align="left"><em>surname</em></td><td align="right">2017</td></tr></tbody></table>
+<p>Where <em>forename</em> and <em>surname</em> have the real values in.</p>
+<h4>Table Structure</h4>
+<p><img src="content-assets/2019-05-15-code-in-postgresql-inner-join/erd.svg" alt="content-assets/2019-05-15-code-in-postgresql-inner-join/erd.svg"></p>
+<h4>Table Data</h4>
+<h5>races</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">raceId</th><th align="right">year</th><th align="right">round</th><th align="right">circuitId</th><th align="left">name</th><th align="right">date</th><th align="right">time</th><th align="left">url</th></tr></thead><tbody><tr><td align="right">971</td><td align="right">2017</td><td align="right">3</td><td align="right">3</td><td align="left">Bahrain Grand Prix</td><td align="right">2017-04-16</td><td align="right">15:00:00</td><td align="left"><a href="https://en.wikipedia.org/wiki/2017_Bahrain_Grand_Prix">https://en.wikipedia.org/wiki/2017_Bahrain_Grand_Prix</a></td></tr><tr><td align="right">977</td><td align="right">2017</td><td align="right">9</td><td align="right">70</td><td align="left">Austrian Grand Prix</td><td align="right">2017-07-09</td><td align="right">12:00:00</td><td align="left"><a href="https://en.wikipedia.org/wiki/2017_Austrian_Grand_Prix">https://en.wikipedia.org/wiki/2017_Austrian_Grand_Prix</a></td></tr></tbody></table>
+<h5>driverStandings</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">driverStandingsId</th><th align="right">raceId</th><th align="right">driverId</th><th align="right">points</th><th align="right">position</th><th align="left">positionText</th><th align="right">wins</th></tr></thead><tbody><tr><td align="right">64795</td><td align="right">856</td><td align="right">1</td><td align="right">196</td><td align="right">5</td><td align="left">5</td><td align="right">2</td></tr><tr><td align="right">64810</td><td align="right">856</td><td align="right">3</td><td align="right">67</td><td align="right">7</td><td align="left">7</td><td align="right">0</td></tr></tbody></table>
+<h5>drivers</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="right">driverId</th><th align="left">driverRef</th><th align="right">number</th><th align="left">code</th><th align="left">forename</th><th align="left">surname</th><th align="right">dob</th><th align="left">nationality</th><th align="left">url</th></tr></thead><tbody><tr><td align="right">2</td><td align="left">heidfeld</td><td align="right"></td><td align="left">HEI</td><td align="left">Nick</td><td align="left">Heidfeld</td><td align="right">1977-05-10</td><td align="left">German</td><td align="left"><a href="http://en.wikipedia.org/wiki/Nick_Heidfeld">http://en.wikipedia.org/wiki/Nick_Heidfeld</a></td></tr><tr><td align="right">4</td><td align="left">alonso</td><td align="right">14</td><td align="left">ALO</td><td align="left">Fernando</td><td align="left">Alonso</td><td align="right">1981-07-29</td><td align="left">Spanish</td><td align="left"><a href="http://en.wikipedia.org/wiki/Fernando_Alonso">http://en.wikipedia.org/wiki/Fernando_Alonso</a></td></tr></tbody></table>
+<h4>Implementing the JavaScript</h4>
+<p>If we think about what code we had in the previous article there are two peices of functionality  we're missing. These are:</p>
+<ol>
+<li>The ability to find a row in the <code>drivers</code> table that matches a row in our current result set.</li>
+<li>The ability to mix/join this row from <code>drivers</code> with our current results.</li>
+</ol>
+<p>I'm going to aim to write code that is highly reusable and also still performs well on very large data sets.</p>
+<h5>Finding drivers efficiently</h5>
+<p>The obvious answer to finding a <code>driver</code> from a list of <code>drivers</code> would be to use <code>Array.find()</code>... something lie the following?</p>
+<pre><code class="language-javascript">const assert = require("assert");
+
+
+const drivers = [
+    { driverId: 2, forename: "Lewis", surname: "Hamilton" },
+    { driverId: 14, forename: "Fernando", surname: "Alonso" }
+];
+
+
+/**
+ * Find one `row` within rows that has `value` within the specified `column`.
+ *
+ * @param column string The property within the rows to look within.
+ * @param value number|string The value that column (above) should be.
+ * @param rows Row[] An array of objects to represent rows.
+ * @return Row
+ */
+function arrayFind(column, value, rows) {
+    return rows.find((row) => {
+        return row[column] == value;
+    });
+}
+
+
+assert.equal(arrayFind("driverId", 14, drivers).forename, "Fernando");
+
+
+module.exports = arrayFind;
+</code></pre>
+<p>This is certainly a reusable piece of code and was easy to write and hopefully for you to understand.</p>
+<p>I can see two problems here though.</p>
+<p>The first problem is performance. When we need to look up a <code>driverId</code> we need to scan all the rows in <code>drivers</code> up until the point we find the correct one. We will be doing this for all of the (hypothetically millions of) <code>driverId</code> we want to look up. So I'm pretty sure the performance characteristics of this is not great.</p>
+<p>The other short coming I can see is that it will only ever retreive one row. This is often what we want to acheive, but not always. An example of when this is not enough is when you have one customerId and you want to find / match / join it to all orders in another table.</p>
+<p>The following would perform much better and allow returning multiple rows:</p>
+<h6>sql-spitting-image/_indexBySimple.js</h6>
+<pre><code class="language-javascript">const assert = require("assert");
+
+
+/**
+ * Given an array of Row, index them using a specific column so you can find a
+ * Row quickly without having to `.find()` it.
+ *
+ * @param columnName keyof Row
+ * @param rows Row[]
+ * @return Map&#x3C;Row[columnName],Row>
+ */
+function indexBySimple(columnName, rows) {
+    return rows.reduce((acc, row) => {
+        if (!row.hasOwnProperty(columnName)) { return acc; }
+
+        const k = row[columnName];
+        if (!acc.has(k)) {
+            acc.set(k, []);
+        }
+        acc.get(k).push(row);
+
+        return acc;
+    }, new Map());
+}
+
+
+/**
+ * Given an index, find all rows that have the value
+ *
+ * @param index Map&#x3C;Row[columnName], Row>
+ * @param value Row[columnName]
+ * @return Row[]
+ */
+function findByIndex(value, index) {
+    if (!index.has(value)) { return []; }
+    return index.get(value);
+}
+
+const index = indexBySimple(
+    "driverId",
+    [
+        { driverId: 2, forename: "Lewis", surname: "Hamilton" },
+        { driverId: 14, forename: "Fernando", surname: "Alonso" }
+    ]
+);
+
+assert.equal(
+    findByIndex(14, index)[0].forename,
+    "Fernando"
+);
+
+
+module.exports = { indexBySimple, findByIndex };
+</code></pre>
+<p>The <code>indexBySimple</code> function can scan through the whole set of <code>drivers</code> and fill up a Map with the key being <code>driverId</code> and the values are the actual rows with have that <code>driverId</code>.  Once we have this Map looking up drivers by <code>driverId</code> will become very cheap.</p>
+<h5>Mixing a <code>drivers</code> record with our current results</h5>
+<p>Combining an Object of one type (<code>driverRow</code>) with another (<code>currentResults</code>) is really easy in ES6 because you can simply destruct the objects to create new one like the following</p>
+<pre><code class="language-javascript">    const newObject = {...currentResults, ...driverRow};
+</code></pre>
+<h4>Building the libraries</h4>
+<h6>sql-spitting-image/innerJoinSimple.js</h6>
+<p>Because of all our planning the innerJoinSimple library has become really quite simple.</p>
+<pre><code class="language-javascript">const { indexBySimple } = require('./_indexBySimple');
+
+// interface LeftRow extends Row {
+//     // Here there may be fields
+// }
+// interface RightRow extends Row {
+//     // Here there may be fields
+// }
+
+/**
+ * For every leftRow, combine it with as many as possible rightRow.
+ *
+ * @param leftRows LeftRow[]
+ * @param joinColumns [keyof LeftRow, keyof RightRow] The fields to join
+ * @param rightRows RightRow[]
+ * @return Row[]
+ */
+function innerJoinSimple(leftRows, joinColumns, rightRows) {
+
+    const [leftColumn, rightColumn] = joinColumns;
+
+    /**
+     * Join leftRow to all found foundRightRows
+     *
+     * @param leftRow LeftRow
+     * @param foundRightRows RightRow[]
+     */
+    function joinRows(leftRow, foundRightRows) {
+        return foundRightRows.map(rightRow => {
+            return {...rightRow, ...leftRow};
+        });
+    }
+
+
+    const rightRowIndex = indexBySimple(rightColumn, rightRows);
+
+    let results = [];
+    for (const leftRow of leftRows) {
+        if (rightRowIndex.has(leftRow[leftColumn])) {
+            results = results.concat(
+                joinRows(
+                    leftRow,
+                    rightRowIndex.get(leftRow[leftColumn])
+                )
+            );
+        }
+    }
+
+    return results;
+}
+
+module.exports = innerJoinSimple;
+</code></pre>
+<p>Reading through it you can see that the first thing it does is build an index for the right set of data.</p>
+<p>After this it will read through all of the left set of data, checking if it can be joined to the right, if it can it will be.</p>
+<h4>Libraries</h4>
+<div class="hide-by-header">
+<h6>sql-spitting-image/select.js</h6>
+<pre><code class="language-javascript">function select(spec) {
+
+    function mapper(row) {
+        let r = {};
+        spec.forEach(([theFrom, theTo]) => {
+            r[theTo] = row[theFrom]
+        });
+        return r;
+    }
+
+    return function selectImpl(rows) {
+        return rows.map(mapper);
+    };
+}
+
+
+module.exports = select;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/orderBy.js</h6>
+<pre><code class="language-javascript">/**
+ * Creates a `sortFn` for the JavaScript [Array.prototype.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) function.
+ *
+ * @param columnName string The name of the column to sort by.
+ * @param direction string If this is 'ASC' sort ascending, otherwise descending.
+ * @return (a: number, b: number) => number The `sortFn`.
+ */
+function getSingleCompareFunction(columnName, direction) {
+
+    const flipper = direction.toLowerCase() == 'asc' ? 1 : -1;
+
+    return function singleCompareFunction(rowA, rowB) {
+        return (rowA[columnName] - rowB[columnName]) * flipper;
+    }
+}
+
+
+/**
+ * Orders a set of rows
+ *
+ * @param columnName string
+ * @param direction string ( 'ASC' || 'DESC' )
+ * @param rows Row[]
+ * @return Row[]
+ */
+function orderBy(columnName, direction='ASC') {
+
+    const compareFunction = getSingleCompareFunction(columnName, direction);
+
+    return function(rows) {
+        return rows.sort(compareFunction);
+    };
+}
+
+
+orderBy.getSingleCompareFunction = getSingleCompareFunction;
+module.exports = orderBy;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/orderByMulti.js</h6>
+<pre><code class="language-javascript">const { getSingleCompareFunction } = require('./orderBy');
+
+/**
+ * Gets a `sortFn` for [Array.prototype.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort)
+ * that will sort whole rows based on a list of `columnName` and `direction`
+ * tuples.
+ *
+ * @param colDirectionTuples `[columnName: string, direction: string][]`
+ * Ordering specification where `columnName` and `direction` are parameters from
+ * `getSingleCompareFunction`.
+ * @return (a: Row, b: Row) => number The `sortFn`.
+ */
+function orderByMulti(colDirectionTuples) {
+
+    function compareFunction(rowA, rowB) {
+        return colDirectionTuples.reduce((acc, [col, dir]) => {
+            if (acc != 0) { return acc; }
+            const cf = getSingleCompareFunction(col, dir);
+            return cf(rowA, rowB);
+        }, 0);
+    }
+
+    return function(rows) {
+        return rows.sort(compareFunction);
+    }
+
+}
+
+module.exports = orderByMulti;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/limit.js</h6>
+<pre><code class="language-javascript">/**
+ * Gets the first n rows from a set of rows.
+ *
+ * @param n number
+ * @return (rows: Rows[]) => Rows[]
+ */
+function limit(n) {
+    return function(rows) {
+        return rows.slice(0, n);
+    }
+}
+
+
+module.exports = limit;
+</code></pre>
+</div>
+<div class="hide-by-header">
+<h6>sql-spitting-image/qryTable.js</h6>
+<pre><code class="language-javascript">const { runQuery } = require('./../_utils');
+
+/**
+ * Gets results from a table
+ *
+ * @param table string The of a table to pull from.
+ * @param column The colum to look at to decide when to include a row.
+ * @param values number[] Retreive values where `column` is one of these values.
+ * @return Promise&#x3C;Row[]>
+ */
+function qryTable(table, column=null, values) {
+    if (column === null) {
+        return runQuery(`select * from "${table}"`);
+    }
+    if (values.length == 0) { return []; }
+    const inClause = '(' + values.map((_, i) => '$' + (i + 1)).join(",") + ')';
+    const sql = `
+        select *
+        from "${table}"
+        where "${column}" in ${inClause}`;
+
+    return runQuery(sql, values);
+}
+
+
+module.exports = qryTable;
+</code></pre>
+</div>
+<h4>Main Code</h4>
+<p>The last thing to do is glue all the code together. See below:</p>
+<pre><code class="language-javascript">const { output } = require('./_utils');
+const select = require('./sql-spitting-image/select');
+const orderBy = require('./sql-spitting-image/orderBy');
+const orderByMulti = require('./sql-spitting-image/orderByMulti');
+const limit = require('./sql-spitting-image/limit');
+const qryTable = require('./sql-spitting-image/qryTable');
+const innerJoinSimple = require('./sql-spitting-image/innerJoinSimple');
+
+function addStatic(data) {
+    return function addStaticImpl(rows) {
+        return rows.map(r => {
+            return {...r, ...data};
+        });
+    };
+}
+
+qryTable('races', 'year', [2017])
+    .then(orderBy('round', 'desc'))
+    .then(limit(1))
+    .then((races) => races.map(r => r.raceId))
+    .then((raceIds) => {
+        return Promise.all([
+            qryTable('driverStandings', 'raceId', raceIds),
+            qryTable('drivers') // might as well do in parallel!
+        ]);
+    })
+    .then(([driverStandings, drivers]) => {
+        return innerJoinSimple(
+            driverStandings,
+            ['driverId', 'driverId'],
+            drivers
+        );
+    })
+    .then(orderByMulti([['points', 'desc'], ['driverId', 'asc']]))
+    .then(select([
+        ['points', 'points'],
+        ['driverId', 'driverId'],
+        ['forename', 'forename'],
+        ['surname', 'surname']
+    ]))
+    .then(addStatic({year: 2017}))
+    .then(output)
+    .catch(err => { console.log("ERROR:", err) });
+</code></pre>
+<p>Again we have a rather large amount of code, however I again think it is quite readable.</p>
+<p>Even if you disagree and don't like this code I hope you will agree that this amount of code could easily be wrote quite badly.</p>
+<div class="pro-list">
+<h5>Pro's</h5>
+<ul>
+<li>Broken down quite well into bite size peices.</li>
+<li>A lot of this code is quite reusable, if you wish.</li>
+</ul>
+</div>
+<div class="con-list">
+<h5>Con's</h5>
+<ul>
+<li>There's a lot of it.</li>
+<li>We are again requesting more data than is required.</li>
+</ul>
+</div>
+<h4>The SQL</h4>
+<pre><code class="language-javascript">WITH "lastRaceIn2017" as (
+    SELECT "raceId" FROM races
+    WHERE year = 2017
+    ORDER BY "round" DESC
+    LIMIT 1
+)
+SELECT
+    "driverStandings".points,
+    "driverStandings"."driverId",
+    drivers.forename,
+    drivers.surname,
+    2017 as year
+FROM "driverStandings"
+INNER JOIN drivers ON drivers."driverId" = "driverStandings"."driverId"
+WHERE "raceId" IN ( SELECT "raceId" FROM "lastRaceIn2017" )
+ORDER BY
+    "driverStandings".points DESC,
+    "driverStandings"."driverId" ASC
+</code></pre>
+<div class="pro-list">
+<h4>Pro's</h4>
+<ul>
+<li>Shorter than the JavaScript.</li>
+<li>If this were called by JavaScript we would need only one Promise, which is much easier to write and reason about.</li>
+<li>The <code>INNER JOIN</code> relatively effortlessly mixes in data about drivers into what we had before.</li>
+</ul>
+</div>
+<div class="con-list">
+<h4>Con's</h4>
+<ul>
+<li>There's not much here that's re-usable, other than the knowledge you've acquired.</li>
+</ul>
+</div>
+<link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/tomorrow-night.min.css">
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll('pre code[data-lang]').forEach(
+    (block) => {hljs.highlightBlock(block);}
+  );
+  ["bash", "javascript", "json", "sql"]
+    .forEach(function(lang) {
+      document.querySelectorAll('pre code.language-' + lang).forEach(
+        (block) => {hljs.highlightBlock(block);}
+      );
+    });
+});
+</script>
+<style>
+</style>
+<script>
+</script>
+<p>Tags: <a href='tag_code-in-postgresql.html'>code-in-postgresql</a>, <a href='tag_javascript.html'>javascript</a>, <a href='tag_postgresql.html'>postgresql</a></p>
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-05-15-code-in-postgresql-inner-join.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-05-15-code-in-postgresql-inner-join.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Wed, 15 May 2019 08:30:01 +0100</pubDate></item>
+<item><title>
+CSV Guillotine - First Rust Program / Library
+</title><description><![CDATA[
+<p>I have just published my first rust program, first rust library and crates.io package.</p>
+<p>It's a library/program for removing metadata from above the (real) header of CSV files, which gets in the way when writing software to parse the CSV's</p>
+<p>The <a href="https://github.com/forbesmyester/csv-guillotine">Git Repository</a> includes full source code as well as examples how to use the program, or the library.
+Tags: csv, data-cleaning, linux, rust, unix</p>
+
+
+
+
+<!-- text end -->
+]]></description><link>http://matt-at.keyboard-writes-code.com//2019-05-02-first-rust-software-published.html</link>
+<guid>http://matt-at.keyboard-writes-code.com//./2019-05-02-first-rust-software-published.html</guid>
+<dc:creator>Matt Forrester</dc:creator>
+<pubDate>Thu, 02 May 2019 08:30:01 +0100</pubDate></item>
+</channel></rss>

@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Replacing Cron with AWS Lamda</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2016-05-01-replacing-cron-with-aws-lamda.html">
+Replacing Cron with AWS Lamda
+</a></h3>
+<!-- bashblog_timestamp: #201605010830.01# -->
+<div class="subtitle">May 01, 2016 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p><img src="/content-assets/2016-05-01-replacing-cron-with-aws-lamda/intro.png" alt="Replacing Cron with AWS Lamda"></p>
+<p>We're running a mix of <a href="https://aws.amazon.com/elasticbeanstalk/">AWS Elastic Beanstalk</a> along with some random <a href="https://aws.amazon.com/ec2/">EC2's</a>, <a href="https://aws.amazon.com/sqs/">SQS</a>, <a href="https://aws.amazon.com/rds/">RDS</a> and a few other things at work.</p>
+<p>Currently we have some <a href="https://en.wikipedia.org/wiki/Cron">Cron</a> running on these EC2's which bothers me as if these servers fail we need to re-instate it. Sure we are using <a href="https://www.ansible.com/">Ansible</a> to make re-installation a breeze but it still doesn't feel right to me and we're probably spending a bit too much money because these servers are idle while they're not doing their timed tasks.</p>
+<p>I am a regular attendee at <a href="http://lnug.org">LNUG</a> and the last few meetings have had some good coverage about AWS Lambda so I thought it was about time I started catching up! So My weekend investigation is going to be to seeing if I could get Lamda running Cron related tasks.</p>
+<p>I did the pointy clicky process in the <a href="https://aws.amazon.com/console/">AWS console</a> and had a Lamda putting items into an SQS queue... It was pretty easy and it worked... Awesome!</p>
+<p>I'm going to come back and show you how to do this in a proper automated / <a href="http://stackoverflow.com/questions/1077412/what-is-an-idempotent-operation">idempotent</a> way but firstly this is how you do it in the UI.</p>
+<h4>Manual Version</h4>
+<h5>Getting Started</h5>
+<p>Firstly click the "Get Started Now" button on the initial Lambda screen (the header image above), this will take you into a simple wizard like interface as seen below.</p>
+<h5>Picking a BluePrint</h5>
+<p><img src="/content-assets/2016-05-01-replacing-cron-with-aws-lamda/1.png" alt="Picking a BluePrint"></p>
+<p>We use a lot of SQS queues and for now, while I'm just dipping my toes into Lambda I will have the actual work carried out by a worker and just use Lambda kick it off when the time comes. So the task becomes putting an item into an SQS queue when the correct time comes. Because of this I picked something that would bring in the required AWS libraries as a starting point to base my code on.</p>
+<h5>Scheduling</h5>
+<p><img src="/content-assets/2016-05-01-replacing-cron-with-aws-lamda/2.png" alt="defining the schedule"></p>
+<p>This is where the Cron bit comes in, note the fact it comes from Cloudwatch that is important later. You can also put full Cron lines in there but the syntax is <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/ScheduledEvents.html#CronExpressions">slightly strange</a>.</p>
+<h5>The Code</h5>
+<p><img src="/content-assets/2016-05-01-replacing-cron-with-aws-lamda/3.png" alt="All the codes"></p>
+<p>Now we get to write some code. There is support for rudimentary testing etc in the UI but I wouldn't want to do development here... I read breifly about the "Role" and it sounds really interesting but it is a bit too opaque for me right now to write about... For the time being I just created one based on "Basic execution role".</p>
+<p>For the observant people did you notice there are no credentials for writing to the SQS queue? I suspect this is because of the Role, I will need to come back and investigate this, perhaps in a different blog post.</p>
+<h5>Ready to Deploy!</h5>
+<p><img src="/content-assets/2016-05-01-replacing-cron-with-aws-lamda/4.png" alt="The final stage... Just tick that box!"></p>
+<p>Push the button!</p>
+<h4>The Automated / Idempotent Way.</h4>
+<h5>The tools</h5>
+<p>After my <a href="http://keyboardwritescode.blogspot.com/2016/04/investigating-hashicorp-terraform.html">investigations</a> into <a href="http://www.terraform.io/">HashiCorp's Terraform</a> I became a real fan and when I saw that Terraform includes a bunch of functions related to Lamda I knew it would be the tool of choice... However getting them going took a little bit of experimentation...</p>
+<h5>The problems</h5>
+<p>My biggest problem was that I associated the scheduled running of a Lambda with the Lambda product itself as you configure it within the wizard when doing it manually. Seems this is not really the case and attempting to use <a href="https://www.terraform.io/docs/providers/aws/r/lambda_event_source_mapping.html"><code>aws_lambda_event_source_mapping</code></a> got me nowhere.</p>
+<h5>The solution</h5>
+<p>Eventually I found that the schedule exists in Cloudwatch, which seems a bit non-obvious to me but in any case once I found this out I started exploring Terraform's <a href="https://www.terraform.io/docs/providers/aws/r/cloudwatch_event_rule.html"><code>aws_cloudwatch_event_rule</code></a> and <a href="https://www.terraform.io/docs/providers/aws/r/cloudwatch_event_rule.html"><code>aws_cloudwatch_event_target</code></a> as a way to fire the function. It turned out that no matter what I could do I could not get it to show in "Event Sources" in the console as shown below:</p>
+<p><img src="/content-assets/2016-05-01-replacing-cron-with-aws-lamda/5.png" alt="Does not appear"></p>
+<p>The missing part of the puzzle was permissions in the form of <a href="https://www.terraform.io/docs/providers/aws/r/lambda_permission.html"><code>aws_lambda_permission</code></a> and once I added this it all worked well and items were appearing in my SQS queue.</p>
+<h5>What I achieved</h5>
+<p>Seems my weekend work has acheived something awesome as:</p>
+<ul>
+<li>We can now remove an instance that just runs Cron, saving a small amount of money and saving the planet.</li>
+<li>We've given the job of ensuring it all keeps running to AWS so we no longer need to worry so much about the Cron machine going down and us not noticing.</li>
+</ul>
+<h4>What does the finished solution look like?</h4>
+<p>The basics are:</p>
+<ul>
+<li>A zip file including just one JavaScript file which is the code in the screenshot above.</li>
+<li>A JSON file containing the AWS IAM Role, because I don't like HEREDOC's very much.</li>
+<li>The Terraform file itself as seen below</li>
+</ul>
+<!---->
+<pre><code>variable "aws_profile" {}
+
+provider "aws" {
+    profile = "${var.aws_profile}"
+    region = "us-east-1"
+}
+
+resource "aws_iam_role" "iam_for_lambda" {
+    name = "iam_for_lambda"
+    assume_role_policy = "${file("./iam_for_lamda.json")}"
+}
+
+resource "aws_cloudwatch_event_rule" "fire_every_minute" {
+    name = "fire_every_minute"
+    schedule_expression = "cron(* * * * ? *)"
+}
+
+resource "aws_lambda_function" "fire_every_minute" {
+    filename = "./minutely_push_to_sqs.zip"
+    function_name = "fire_every_minute"
+    handler = "index.handler"
+    runtime = "nodejs4.3"
+    role = "${aws_iam_role.iam_for_lambda.arn}"
+}
+
+resource "aws_cloudwatch_event_target" "fire_every_minute" {
+  rule = "${aws_cloudwatch_event_rule.fire_every_minute.name}"
+  arn = "${aws_lambda_function.fire_every_minute.arn}"
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch" {
+    statement_id = "AllowExecutionFromCloudWatch"
+    action = "lambda:InvokeFunction"
+    function_name = "${aws_lambda_function.fire_every_minute.arn}"
+    principal = "events.amazonaws.com"
+    source_arn = "${aws_cloudwatch_event_rule.fire_every_minute.arn}"
+}
+</code></pre>
+<p>To run it, all you need to do is put a (or the) JS file within a zip file and run <code>terraform apply -var aws_profile=$AWS_DEFAULT_PROFILE</code> and it will deploy everything for you.</p>
+<h4>Where's the source?</h4>
+<p>The source for everything is on <a href="https://github.com/forbesmyester/aws-lambda-cron">GitHub</a>.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

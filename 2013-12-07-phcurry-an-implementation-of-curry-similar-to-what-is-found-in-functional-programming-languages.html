@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>"New Release: PHCurry"</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2013-12-07-phcurry-an-implementation-of-curry-similar-to-what-is-found-in-functional-programming-languages.html">
+"New Release: PHCurry"
+</a></h3>
+<!-- bashblog_timestamp: #201312070830.01# -->
+<div class="subtitle">December 07, 2013 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>programming languages.</p>
+<p>Currying is a concept from functional programming where you allow you a function that would normally need <code>n</code> arguments to be called with fewer arguments. When you do this it will return a function with you current arguments stored, but waiting for the extra arguments. When all arguments are finally stored/passed the function will be invoked.</p>
+<p>An Example:</p>
+<pre><code class="language-php">&#x3C;?php
+require_once 'phcurry.php';
+
+$volumeCalculator = function($w, $h, $l) {
+    return $w * $h * $l;
+};
+$iKnowTheWidth = phcurry($volumeCalculator, 3);
+$iKnowTheWidthAndHeight = $iKnowTheWidth(2);
+echo "The volume is " . $iKnowTheWidthAndHeight(4);
+?>
+</code></pre>
+<h4>That's great, but what is the use...</h4>
+<p>Why not think about a mapping function...</p>
+<pre><code class="language-php">&#x3C;?php
+require_once 'phcurry.php';
+
+$map = function($func, $collection) { // Only required because
+    return array_map($func, $collection);
+};
+
+$getId = function($obj) { return $obj['id']; };
+
+$getIds = phcurry($map, $getId);
+
+$data = array(
+    array('id'=>'f3ds', 'name'=> 'Jack'),
+    array('id'=>'adb9', 'name'=> 'Jill'),
+    array('id'=>'93cd', 'name'=> 'John'),
+    array('id'=>'e236', 'name'=> 'Jude')
+);
+
+echo "The user Ids are: " . implode(', ', $getIds($data));
+?>
+</code></pre>
+<p>Yes but you could have achieved this with:</p>
+<pre><code class="language-php">&#x3C;?php
+echo "The user Ids are: " . implode(
+    ', ',
+    array_map(function($obj) { return $obj['id']; }, $data)
+);
+?>
+</code></pre>
+<p>That is true, I would argue that the previous was better because it is broken up into smaller parts which could be more testable and because each little function is named after it's actually doing. PHCurry is still not proving to be <strong>that</strong> useful though, but combining it with <a href="https://github.com/forbesmyester/PHChain">PHChain</a> so you can chain these tiny functions together you can take it a little further...</p>
+<pre><code class="language-php">&#x3C;?php
+require_once 'phcurry.php';
+require_once '../phchain/phchain.php';
+
+// Gets the relative path of a file relative to a parent directory
+// TODO: Make this not throw exceptions when it is not within the parent
+$getRelativePath = function($parentPath, $absoluteChildPath) {
+    if (substr($absoluteChildPath, 0, strlen($parentPath)) != $parentPath) {
+        throw new Exception($absoluteChildPath . ' is not stored beneath ' . $parentPath);
+    }
+    return preg_replace(
+        '/^\//',
+        '',
+        substr($absoluteChildPath, strlen($parentPath))
+    );
+};
+
+$extractField = function($field, $record) {
+    return $record[$field];
+};
+
+$extractRelativePath = phchain(array(
+    phcurry($extractField, 'location'),
+    phcurry(
+        $getRelativePath,
+        '/home/fozz'
+    )
+));
+
+$relativePaths = array_map(
+    $extractRelativePath,
+    array(
+        array(
+            'location'=>'/home/fozz/Documents/CV.html',
+            'description'=>'All about me!'
+        ),
+        array(
+            'location'=>"/home/fozz/Music/MC Hammer - Can't Touch This.mp3",
+            'description'=>"Super famous early 90's song"
+        ),
+        array(
+            'location'=>'/home/fozz/Music/Blur - Parklife.mp3',
+            'description'=>"Super famous mid 90's song"
+        ),
+        array(
+            'location'=>'/home/fozz/Projects/phcurry/README.md',
+            'description'=>"phcurry's README in Markdown format"
+        )
+    )
+);
+
+echo "Inside your my directory I have I have the following files:\n";
+echo implode("\t\n", $relativePaths);
+?>
+</code></pre>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

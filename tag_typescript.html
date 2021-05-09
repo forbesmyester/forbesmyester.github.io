@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>Matt at Keyboard Writes Code &mdash; Posts tagged "typescript"</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<h3><a class="ablack" href="2019-10-20-esqlate-queue-supports-parallelism.html">
+EsqlateQueue now supports parallelism!
+</a></h3>
+<!-- bashblog_timestamp: #201910200830.01# -->
+<div class="subtitle">October 20, 2019 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Previously I wrote about <a href="./2019-09-16-esqlate-queue.html">EsqlateQueue</a>, which is a mini library allowing a queue of work to be set aside and worked on out-of-process. This is useful for things which could be IO intensive and take a while, but don't take a lot of CPU time.</p>
+<p>Because this was the first version it just took items off the queue one by one for processing.</p>
+<p>This is still useful, but perhaps it might be more useful to be able to do these things in parallel?</p>
+<p>The new version, version 2 is built upon <a href="https://caolan.github.io/async/v3/">async</a> and does parallelism up to the amount specified!</p>
+<p>The API is 100% compatible, just an extra optional (default 1) parameter to say how parallel you want it.</p>
+<h5>Installation</h5>
+<p>To install, use NPM:</p>
+<pre><code>npm install esqlate-queue
+</code></pre>
+<h5>License</h5>
+<p>The code is licensed under MIT.</p>
+<p>You can find this project at <a href="https://github.com/forbesmyester/esqlate-queue">GitHub</a>.</p>
+<p>Tags: <a href='tag_typescript.html'>typescript</a>, <a href='tag_nodejs.html'>nodejs</a>, <a href='tag_parallelism.html'>parallelism</a></p>
+
+
+
+<!-- text end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="main.css" type="text/css" />
+<link rel="stylesheet" href="blog.css" type="text/css" />
+<link rel="alternate" type="application/rss+xml" title="Subscribe to this page..." href="feed.rss" />
+<title>New Release... returnFuncToAsyncFunc</title>
+</head><body>
+<div id="divbodyholder">
+<div class="headerholder"><div class="header">
+<div id="title">
+<h1 class="nomargin"><a class="ablack" href="http://matt-at.keyboard-writes-code.com//index.html">Matt at Keyboard Writes Code</a></h1>
+<div id="description">A blog about software development, technology and other things that interest me</div>
+</div></div></div>
+<div id="divbody"><div class="content">
+<!-- entry begin -->
+<h3><a class="ablack" href="2014-02-08-new-release___-returnfunctoasyncfunc.html">
+New Release... returnFuncToAsyncFunc
+</a></h3>
+<!-- bashblog_timestamp: #201402080830.01# -->
+<div class="subtitle">February 08, 2014 &mdash; 
+Matt Forrester
+</div>
+<!-- text begin -->
+<p>Sometimes you have a function, that you're planning to use within something like <code>async.waterfall</code> but it's wrote to be synchronous and returns a value instead of using a callback. This function will accept that function, along with a context and return an asynchronous version of that function</p>
+<h4>Example</h4>
+<pre><code class="language-javascript">var Ctx = function() {
+    this.x = 123;
+};
+
+Ctx.prototype.doIt = function(a, b, c) {
+    return { age: a, legs: b[2], name: c.name};
+};
+
+var ctx = new Ctx();
+
+var f = returnFuncToAsyncFunc(
+    ctx,
+    function(a, b, c) {
+        return ctx.doIt(a, b, c);
+    }
+);
+f(99, [4,6,2], {name: 'matt'}, function(err, res) {
+    console.log([
+        "My name is " + res.name,
+        "I have " + res.legs + " legs",
+        "and am " + res.age + " years old"
+    ].join(' '));
+});
+</code></pre>
+<p>The code is MIT licensed and is available <a href="https://github.com/forbesmyester/returnFuncToAsyncFunc">at GitHub</a>.</p>
+
+
+
+
+<!-- text end -->
+<!-- entry end -->
+</div>
+<div id="footer">All rights reserved <a href="http://matt-at.keyboard-writes-code.com/me.html">Matt Forrester</a> &mdash; <a href="mailto:matt&#64;keyboardwritescode&#46;com">matt&#64;keyboardwritescode&#46;com</a><br/>
+Generated with <a href="https://github.com/cfenollosa/bashblog">bashblog</a>, a single bash script to easily create blogs like this one</div>
+</div></div>
+</body></html>
